@@ -17,9 +17,19 @@ from src.step2_feature_extraction import extract_features_from_urls
 
 app = Flask(__name__)
 
-FINAL_MODEL_PATH = Path("artifacts/ensemble_all_datasets_retry/soft_voting_ensemble.joblib")
+BASE_DIR = Path(__file__).resolve().parent
+_MODEL_PATH_FROM_ENV = os.getenv("FINAL_MODEL_PATH", "").strip()
+
+MODEL_CANDIDATE_PATHS = [
+    Path(_MODEL_PATH_FROM_ENV).expanduser() if _MODEL_PATH_FROM_ENV else None,
+    BASE_DIR / "artifacts" / "ensemble_all_datasets_retry" / "soft_voting_ensemble.joblib",
+    BASE_DIR / "artifacts" / "ensemble_all_datasets" / "soft_voting_ensemble.joblib",
+    BASE_DIR / "artifacts" / "final_submission" / "soft_voting_ensemble.joblib",
+]
+
+FINAL_MODEL_PATH = BASE_DIR / "artifacts" / "ensemble_all_datasets_retry" / "soft_voting_ensemble.joblib"
 FINAL_THRESHOLD = 0.565
-WHOIS_CACHE_PATH = Path("artifacts/whois_cache.csv")
+WHOIS_CACHE_PATH = BASE_DIR / "artifacts" / "whois_cache.csv"
 MODEL_DISPLAY_NAME = "Soft Voting Ensemble (Retry Balanced Sample)"
 EXPECTED_FEATURE_COLUMNS = [
     "url_length",
@@ -125,9 +135,16 @@ HIGH_RISK_PATH_TOKENS = {
 
 def _resolve_model_path() -> Path:
     """Load only the final submission model."""
-    if FINAL_MODEL_PATH.exists():
-        return FINAL_MODEL_PATH
-    raise FileNotFoundError(f"Final ensemble model not found: {FINAL_MODEL_PATH}")
+    for candidate in MODEL_CANDIDATE_PATHS:
+        if candidate is None:
+            continue
+        if candidate.exists() and candidate.is_file():
+            return candidate
+
+    searched_paths = [str(p) for p in MODEL_CANDIDATE_PATHS if p is not None]
+    raise FileNotFoundError(
+        "Final ensemble model not found. Searched: " + " | ".join(searched_paths)
+    )
 
 
 def _get_model() -> Any:
