@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import html
 from pathlib import Path
+import traceback
 from typing import Any
 from urllib.parse import urlparse
 
@@ -345,6 +346,19 @@ def _align_features_to_model(features: pd.DataFrame) -> pd.DataFrame:
     return aligned[EXPECTED_FEATURE_COLUMNS]
 
 
+def _safe_int_feature(features: pd.DataFrame, column: str, default: int = 0) -> int:
+    """Safely read an integer feature from extraction output with a fallback."""
+    try:
+        if column not in features.columns:
+            return default
+        value = features[column].iloc[0]
+        if pd.isna(value):
+            return default
+        return int(value)
+    except Exception:
+        return default
+
+
 def predict_url_label(url: str) -> tuple[str, float, str]:
     model = _get_model()
 
@@ -364,16 +378,16 @@ def predict_url_label(url: str) -> tuple[str, float, str]:
     phishing_probability = float(probabilities[1])
     domain = _registered_domain(url).lower()
 
-    suspicious_path_count = int(features["suspicious_path_keyword_count"].iloc[0])
-    suspicious_keyword_count = int(features["suspicious_keyword_count"].iloc[0])
-    has_wp_path = int(features["has_wp_path"].iloc[0])
-    domain_age_days = int(features["domain_age_days"].iloc[0])
-    dns_resolves = int(features["dns_resolves"].iloc[0])
-    uses_ip_address = int(features["uses_ip_address"].iloc[0])
-    has_suspicious_tld = int(features["has_suspicious_tld"].iloc[0])
-    path_depth = int(features["path_depth"].iloc[0])
-    num_subdomains = int(features["num_subdomains"].iloc[0])
-    has_encoded_chars = int(features["has_encoded_chars"].iloc[0])
+    suspicious_path_count = _safe_int_feature(features, "suspicious_path_keyword_count", 0)
+    suspicious_keyword_count = _safe_int_feature(features, "suspicious_keyword_count", 0)
+    has_wp_path = _safe_int_feature(features, "has_wp_path", 0)
+    domain_age_days = _safe_int_feature(features, "domain_age_days", -1)
+    dns_resolves = _safe_int_feature(features, "dns_resolves", 0)
+    uses_ip_address = _safe_int_feature(features, "uses_ip_address", 0)
+    has_suspicious_tld = _safe_int_feature(features, "has_suspicious_tld", 0)
+    path_depth = _safe_int_feature(features, "path_depth", 0)
+    num_subdomains = _safe_int_feature(features, "num_subdomains", 0)
+    has_encoded_chars = _safe_int_feature(features, "has_encoded_chars", 0)
 
     if (suspicious_path_count >= 1 or has_wp_path == 1) and domain_age_days < 0 and dns_resolves == 0:
         return (
@@ -576,6 +590,8 @@ def _predict_to_payload(raw_url: str) -> tuple[dict[str, Any], int]:
             200,
         )
     except Exception as exc:
+        app.logger.error("Prediction failed for URL '%s': %s", url, exc)
+        app.logger.debug(traceback.format_exc())
         return {"ok": False, "error": f"Prediction failed: {exc}"}, 500
 
 
