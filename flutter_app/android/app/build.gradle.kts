@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.phishguard.phish_guard"
+    namespace = "com.phishguard.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -20,8 +20,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.phishguard.phish_guard"
+        // Keep app id aligned with MainActivity package for stable Android launches.
+        applicationId = "com.phishguard.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
