@@ -14,19 +14,25 @@
 4. Enable **USB Debugging**
 5. Connect phone to computer via USB cable
 
-## Step 2: Configure API URL
+## Step 2: Configure API URL (Recommended: USB Reverse)
 
-Before building, update the Flask backend URL in your code:
+You no longer need to hardcode a LAN IP in code.
 
-**File: `lib/services/api_service.dart` (Line 7)**
+The app reads API URL in this order:
+- Runtime override (`ApiService.setBaseUrl(...)`)
+- Build-time define (`--dart-define=API_BASE_URL=...`)
+- Platform default (Android emulator `10.0.2.2`, iOS/web `localhost`)
 
-```dart
-// Find your Windows PC's IP address:
-// Open Command Prompt and run: ipconfig
-// Look for "IPv4 Address" (typically 192.168.X.X)
+For **Android physical phone over USB cable**, use ADB reverse so phone can call laptop localhost:
 
-static const String baseUrl = 'http://192.168.X.X:5000';
-// Replace X.X with your actual IP address
+```bash
+adb reverse tcp:5000 tcp:5000
+```
+
+Then your phone can reach backend at:
+
+```text
+http://127.0.0.1:5000
 ```
 
 ## Step 3: Build APK on Windows
@@ -106,9 +112,19 @@ Tap **Allow** for camera access.
    python app.py
    ```
 
-2. The Flask app should be running at your PC's IP (e.g., `http://192.168.1.100:5000`)
+2. If using Android physical phone via USB, run:
+   ```bash
+   adb reverse tcp:5000 tcp:5000
+   ```
 
-3. Open Phish Guard app on Android phone and start scanning!
+3. If needed, pass API URL at run/build time:
+   ```bash
+   flutter run --dart-define=API_BASE_URL=http://127.0.0.1:5000
+   ```
+
+4. Backend should respond at `http://127.0.0.1:5000` from the phone app when ADB reverse is active.
+
+5. Open Phish Guard app on Android phone and start scanning!
 
 ## Building Release APK (Optional)
 
@@ -123,10 +139,12 @@ The release APK will be smaller and faster, but requires signing with your own k
 ## Troubleshooting
 
 **App won't connect to Flask backend:**
-- Check your PC IP address matches what's in `api_service.dart`
 - Make sure Flask app is running: `python app.py`
-- Ensure PC and phone are on the same WiFi network
-- Firewall may be blocking port 5000; try disabling Windows Firewall temporarily
+- Re-run USB reverse mapping: `adb reverse tcp:5000 tcp:5000`
+- Verify reverse mapping exists: `adb reverse --list`
+- If USB reverse is unavailable, fallback to LAN and run with:
+   `flutter run --dart-define=API_BASE_URL=http://<PC_IP>:5000`
+- Firewall may still block port 5000 on host
 
 **Flutter not recognized:**
 - Add Flutter to PATH: [https://flutter.dev/docs/get-started/install/windows](https://flutter.dev/docs/get-started/install/windows)

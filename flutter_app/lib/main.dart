@@ -7,7 +7,7 @@ void main() {
 }
 
 class PhishGuardApp extends StatelessWidget {
-  const PhishGuardApp({Key? key}) : super(key: key);
+  const PhishGuardApp({super.key});
 
   @override
   Widget build(BuildContext context) {

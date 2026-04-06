@@ -1,4 +1,5 @@
-import 'dart:convert';
+
+import 'package:flutter/material.dart';
 
 class PredictionResponse {
   final bool ok;
@@ -98,5 +99,3 @@ class PredictionResult {
     return const Color(0xFF63F0A3);
   }
 }
-
-import 'package:flutter/material.dart';

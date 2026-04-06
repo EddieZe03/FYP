@@ -1,4 +1,3 @@
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 class QrScannerService {
   static Future<String?> scanQr() async {
