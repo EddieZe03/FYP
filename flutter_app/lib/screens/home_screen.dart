@@ -52,21 +52,24 @@ class HomePage extends StatelessWidget {
                         borderRadius: BorderRadius.circular(26),
                         border: Border.all(color: const Color(0x52FFFFFF)),
                       ),
-                      child: const Icon(
-                        Icons.shield_rounded,
-                        size: 64,
-                        color: Color(0xFF82E6FF),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(22),
+                        child: Image.asset(
+                          'assets/logo.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'Phish Guard',
+                      'PHISH\nGUARD',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.michroma(
-                        fontSize: 36,
+                        fontSize: 34,
                         fontWeight: FontWeight.w700,
+                        height: 1.18,
                         color: const Color(0xFFF5F9FF),
-                        letterSpacing: 0.14 * 16,
+                        letterSpacing: 2.2,
                         shadows: const [
                           Shadow(
                             color: Color(0x5882E6FF),
@@ -89,53 +92,34 @@ class HomePage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 28),
-                    Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 12,
-                      runSpacing: 12,
+                    Row(
                       children: [
-                        _HomeActionButton(
-                          title: 'Scan URL',
-                          icon: Icons.travel_explore,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const UrlScanScreen(),
-                              ),
-                            );
-                          },
+                        Expanded(
+                          child: _HomeActionButton(
+                            title: 'Scan URL',
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const UrlScanScreen(),
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                        _HomeActionButton(
-                          title: 'Scan QR Code',
-                          icon: Icons.qr_code_scanner_rounded,
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const QrScanScreen(),
-                              ),
-                            );
-                          },
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _HomeActionButton(
+                            title: 'Scan QR Code',
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const QrScanScreen(),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 18),
-                    Text(
-                      'Ensemble Learning Model',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 13,
-                        color: const Color(0xFF95A5D7),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'soft_voting_ensemble v1.0',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFFF5F9FF),
-                      ),
                     ),
                   ],
                 ),
@@ -151,37 +135,31 @@ class HomePage extends StatelessWidget {
 class _HomeActionButton extends StatelessWidget {
   const _HomeActionButton({
     required this.title,
-    required this.icon,
     required this.onTap,
   });
 
   final String title;
-  final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 260,
-      child: ElevatedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon, size: 18),
-        label: Text(title),
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          foregroundColor: const Color(0xFF00133A),
-          backgroundColor: const Color(0xFF6BD3FF),
-          textStyle: GoogleFonts.spaceGrotesk(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(999),
-          ),
-          shadowColor: const Color(0x596BD3FF),
-          elevation: 8,
+    return ElevatedButton(
+      onPressed: onTap,
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        foregroundColor: const Color(0xFF00133A),
+        backgroundColor: const Color(0xFF6BD3FF),
+        textStyle: GoogleFonts.spaceGrotesk(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(999),
+        ),
+        shadowColor: const Color(0x596BD3FF),
+        elevation: 8,
       ),
+      child: Text(title),
     );
   }
 }
