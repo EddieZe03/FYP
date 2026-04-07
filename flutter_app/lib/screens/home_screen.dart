@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/plexus_background.dart';
 import 'url_scan_screen.dart';
 import 'qr_scan_screen.dart';
 
@@ -9,18 +10,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF010528),
-              Color(0xFF030D4F),
-              Color(0xFF004B8E),
-            ],
-          ),
-        ),
+      body: PlexusBackground(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),

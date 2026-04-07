@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../widgets/analyzing_overlay.dart';
+import '../widgets/plexus_background.dart';
 import 'result_screen.dart';
 
 class UrlScanScreen extends StatefulWidget {
@@ -54,32 +56,23 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF010528),
-              Color(0xFF030D4F),
-              Color(0xFF004B8E),
-            ],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xBF080D3E),
-                  border: Border.all(color: const Color(0x38A8C9FF)),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+      body: PlexusBackground(
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xBF080D3E),
+                      border: Border.all(color: const Color(0x38A8C9FF)),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
                       decoration: const BoxDecoration(
@@ -163,10 +156,10 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFF6978).withOpacity(0.16),
+                                color: const Color(0xFFFF6978).withValues(alpha: 0.16),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: const Color(0xFFFF6978).withOpacity(0.5),
+                                  color: const Color(0xFFFF6978).withValues(alpha: 0.5),
                                 ),
                               ),
                               child: Row(
@@ -190,9 +183,9 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 backgroundColor: _isLoading
-                                    ? const Color(0xFF3DA9FF).withOpacity(0.5)
+                                    ? const Color(0xFF3DA9FF).withValues(alpha: 0.5)
                                     : const Color(0xFF3DA9FF),
-                                disabledBackgroundColor: const Color(0xFF3DA9FF).withOpacity(0.5),
+                                  disabledBackgroundColor: const Color(0xFF3DA9FF).withValues(alpha: 0.5),
                               ),
                               child: _isLoading
                                   ? const SizedBox(
@@ -220,7 +213,7 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF040828),
                               border: Border.all(
-                                color: const Color(0xFFA8C9FF).withOpacity(0.22),
+                                color: const Color(0xFFA8C9FF).withValues(alpha: 0.22),
                               ),
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -255,11 +248,14 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                         ],
                       ),
                     ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            AnalyzingOverlay(visible: _isLoading),
+          ],
         ),
       ),
     );

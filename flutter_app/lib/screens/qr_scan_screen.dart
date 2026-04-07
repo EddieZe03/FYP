@@ -3,6 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/qr_scanner_service.dart';
 import '../services/api_service.dart';
+import '../widgets/analyzing_overlay.dart';
+import '../widgets/plexus_background.dart';
 import 'result_screen.dart';
 
 class QrScanScreen extends StatefulWidget {
@@ -69,6 +71,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
     }
 
     setState(() {
+      _isProcessing = true;
       _error = null;
     });
 
@@ -93,32 +96,23 @@ class _QrScanScreenState extends State<QrScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF010528),
-              Color(0xFF030D4F),
-              Color(0xFF004B8E),
-            ],
-          ),
-        ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xBF080D3E),
-                  border: Border.all(color: const Color(0x38A8C9FF)),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+      body: PlexusBackground(
+        child: Stack(
+          children: [
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1000),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xBF080D3E),
+                      border: Border.all(color: const Color(0x38A8C9FF)),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 22),
                       decoration: const BoxDecoration(
@@ -182,7 +176,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
                               border: Border.all(
-                                color: const Color(0xFFA8C9FF).withOpacity(0.22),
+                                color: const Color(0xFFA8C9FF).withValues(alpha: 0.22),
                               ),
                             ),
                             clipBehavior: Clip.hardEdge,
@@ -245,10 +239,10 @@ class _QrScanScreenState extends State<QrScanScreen> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFFF6978).withOpacity(0.16),
+                                color: const Color(0xFFFF6978).withValues(alpha: 0.16),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: const Color(0xFFFF6978).withOpacity(0.5),
+                                  color: const Color(0xFFFF6978).withValues(alpha: 0.5),
                                 ),
                               ),
                               child: Row(
@@ -274,7 +268,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 backgroundColor: _isProcessing
-                                    ? const Color(0xFF3DA9FF).withOpacity(0.5)
+                                    ? const Color(0xFF3DA9FF).withValues(alpha: 0.5)
                                     : const Color(0xFF3DA9FF),
                               ),
                               child: _isProcessing
@@ -294,11 +288,18 @@ class _QrScanScreenState extends State<QrScanScreen> {
                         ],
                       ),
                     ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            AnalyzingOverlay(
+              visible: _isProcessing,
+              title: 'ANALYZING QR URL',
+              subtitle: 'Extracting QR content and evaluating phishing risk.',
+            ),
+          ],
         ),
       ),
     );

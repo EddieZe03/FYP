@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/prediction_model.dart';
+import '../widgets/plexus_background.dart';
 
 class ResultScreen extends StatelessWidget {
   final PredictionResponse response;
@@ -20,18 +21,7 @@ class ResultScreen extends StatelessWidget {
     }
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF010528),
-              Color(0xFF030D4F),
-              Color(0xFF004B8E),
-            ],
-          ),
-        ),
+      body: PlexusBackground(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
@@ -140,7 +130,7 @@ class ResultScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: const Color(0xFF040828),
                               border: Border.all(
-                                color: const Color(0xFFA8C9FF).withOpacity(0.22),
+                                color: const Color(0xFFA8C9FF).withValues(alpha: 0.22),
                               ),
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -197,7 +187,7 @@ class ResultScreen extends StatelessWidget {
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
                                 border: Border.all(
-                                  color: const Color(0xFF82E6FF).withOpacity(0.34),
+                                  color: const Color(0xFF82E6FF).withValues(alpha: 0.34),
                                   style: BorderStyle.solid,
                                   width: 1,
                                 ),
@@ -235,7 +225,7 @@ class ResultScreen extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: const Color(0xFF040828),
                                 border: Border.all(
-                                  color: const Color(0xFFA8C9FF).withOpacity(0.22),
+                                  color: const Color(0xFFA8C9FF).withValues(alpha: 0.22),
                                 ),
                                 borderRadius: BorderRadius.circular(14),
                               ),
@@ -322,7 +312,7 @@ class ResultScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF040828),
         border: Border.all(
-          color: const Color(0xFFA8C9FF).withOpacity(0.22),
+          color: const Color(0xFFA8C9FF).withValues(alpha: 0.22),
         ),
         borderRadius: BorderRadius.circular(14),
       ),
