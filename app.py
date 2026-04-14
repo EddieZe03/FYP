@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 import html
+import hashlib
 from pathlib import Path
 import traceback
 from typing import Any
 from urllib.parse import urlparse
+from urllib.request import urlopen
 
 import joblib
 import pandas as pd
@@ -19,9 +21,18 @@ app = Flask(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 _MODEL_PATH_FROM_ENV = os.getenv("FINAL_MODEL_PATH", "").strip()
+_MODEL_DOWNLOAD_URL = os.getenv("MODEL_DOWNLOAD_URL", "").strip()
+_MODEL_DOWNLOAD_SHA256 = os.getenv("MODEL_DOWNLOAD_SHA256", "").strip().lower()
+_RUNTIME_MODEL_PATH = Path(
+    os.getenv(
+        "RUNTIME_MODEL_PATH",
+        str(BASE_DIR / "artifacts" / "runtime" / "soft_voting_ensemble.joblib"),
+    )
+).expanduser()
 
 MODEL_CANDIDATE_PATHS = [
     Path(_MODEL_PATH_FROM_ENV).expanduser() if _MODEL_PATH_FROM_ENV else None,
+    _RUNTIME_MODEL_PATH,
     BASE_DIR / "artifacts" / "ensemble_all_datasets_retry" / "soft_voting_ensemble.joblib",
     BASE_DIR / "artifacts" / "ensemble_all_datasets" / "soft_voting_ensemble.joblib",
     BASE_DIR / "artifacts" / "final_submission" / "soft_voting_ensemble.joblib",
@@ -135,6 +146,10 @@ HIGH_RISK_PATH_TOKENS = {
 
 def _resolve_model_path() -> Path:
     """Load only the final submission model."""
+    downloaded_path = _download_model_if_configured()
+    if downloaded_path is not None and downloaded_path.exists() and downloaded_path.is_file():
+        return downloaded_path
+
     for candidate in MODEL_CANDIDATE_PATHS:
         if candidate is None:
             continue
@@ -145,6 +160,38 @@ def _resolve_model_path() -> Path:
     raise FileNotFoundError(
         "Final ensemble model not found. Searched: " + " | ".join(searched_paths)
     )
+
+
+def _download_model_if_configured() -> Path | None:
+    """Download model from external storage when configured for cloud deploys."""
+    if not _MODEL_DOWNLOAD_URL:
+        return None
+
+    target = _RUNTIME_MODEL_PATH
+    if target.exists() and target.is_file() and target.stat().st_size > 0:
+        return target
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temp_file = target.with_suffix(target.suffix + ".part")
+    digest = hashlib.sha256()
+
+    with urlopen(_MODEL_DOWNLOAD_URL, timeout=120) as response, temp_file.open("wb") as out_file:
+        while True:
+            chunk = response.read(1024 * 1024)
+            if not chunk:
+                break
+            out_file.write(chunk)
+            digest.update(chunk)
+
+    if temp_file.stat().st_size == 0:
+        raise RuntimeError("Downloaded model file is empty.")
+
+    if _MODEL_DOWNLOAD_SHA256 and digest.hexdigest().lower() != _MODEL_DOWNLOAD_SHA256:
+        temp_file.unlink(missing_ok=True)
+        raise RuntimeError("Downloaded model checksum does not match MODEL_DOWNLOAD_SHA256.")
+
+    temp_file.replace(target)
+    return target
 
 
 def _get_model() -> Any:
@@ -638,4 +685,5 @@ def api_predict() -> Any:
 
 
 if __name__ == "__main__":
-    app.run(debug=False, use_reloader=False, host="0.0.0.0", port=5000)
+    port = int(os.getenv("PORT", "5000"))
+    app.run(debug=False, use_reloader=False, host="0.0.0.0", port=port)
