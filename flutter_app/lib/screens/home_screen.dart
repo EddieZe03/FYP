@@ -17,7 +17,8 @@ class HomePage extends StatelessWidget {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 860),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
                 decoration: BoxDecoration(
                   color: const Color(0xBF080D3E),
                   border: Border.all(color: const Color(0x48A8C9FF)),
@@ -149,7 +150,14 @@ class _HomeActionButton extends StatelessWidget {
         shadowColor: const Color(0x596BD3FF),
         elevation: 8,
       ),
-      child: Text(title),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          title,
+          maxLines: 1,
+          softWrap: false,
+        ),
+      ),
     );
   }
 }
