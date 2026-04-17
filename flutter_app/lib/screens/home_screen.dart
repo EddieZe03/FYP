@@ -141,7 +141,7 @@ class _HomeActionButton extends StatelessWidget {
         foregroundColor: const Color(0xFF00133A),
         backgroundColor: const Color(0xFF6BD3FF),
         textStyle: GoogleFonts.spaceGrotesk(
-          fontSize: 16,
+          fontSize: 14,
           fontWeight: FontWeight.w700,
         ),
         shape: RoundedRectangleBorder(
@@ -150,13 +150,11 @@ class _HomeActionButton extends StatelessWidget {
         shadowColor: const Color(0x596BD3FF),
         elevation: 8,
       ),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          title,
-          maxLines: 1,
-          softWrap: false,
-        ),
+      child: Text(
+        title,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
