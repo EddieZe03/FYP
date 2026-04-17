@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../widgets/analyzing_overlay.dart';
 import '../widgets/plexus_background.dart';
+import 'home_screen.dart';
 import 'result_screen.dart';
 
 class UrlScanScreen extends StatefulWidget {
@@ -40,11 +41,27 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
     if (!mounted) return;
 
     if (response.ok && response.result != null) {
-      Navigator.of(context).push(
+      final action = await Navigator.of(context).push<ResultScreenAction>(
         MaterialPageRoute(
-          builder: (context) => ResultScreen(response: response),
+          builder: (context) => ResultScreen(
+            response: response,
+            source: ScanFlowSource.url,
+          ),
         ),
       );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (action == ResultScreenAction.backHome) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false,
+        );
+      }
     } else {
       setState(() {
         _isLoading = false;
@@ -151,22 +168,62 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                                       Text(
                                         'Enter Website URL',
                                         style: GoogleFonts.spaceGrotesk(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFFD8E5FF),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFFF5F9FF),
+                                          letterSpacing: 0.1,
                                         ),
                                       ),
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: 14),
                                       TextField(
                                         controller: _urlController,
                                         enabled: !_isLoading,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           hintText: 'https://example.com',
-                                          prefixIcon: Icon(Icons.link,
+                                          hintStyle: GoogleFonts.spaceGrotesk(
+                                            color: const Color(0xFF6B7FA0),
+                                          ),
+                                          prefixIcon: const Icon(Icons.link,
                                               color: Color(0xFF82E6FF)),
+                                          filled: true,
+                                          fillColor: const Color(0xFF0A0F32),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFA8C9FF),
+                                              width: 1.2,
+                                            ),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0x3FA8C9FF),
+                                              width: 1.2,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFF82E6FF),
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          disabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0x2FA8C9FF),
+                                              width: 1,
+                                            ),
+                                          ),
                                         ),
                                         style: GoogleFonts.spaceGrotesk(
-                                            color: const Color(0xFFE7EDFF)),
+                                            color: const Color(0xFFF0F4FF),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
                                         onSubmitted: (_) => _submit(),
                                       ),
                                       const SizedBox(height: 20),
@@ -206,22 +263,29 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                                               _isLoading ? null : _submit,
                                           style: ElevatedButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
+                                                vertical: 17),
                                             backgroundColor: _isLoading
                                                 ? const Color(0xFF3DA9FF)
-                                                    .withValues(alpha: 0.5)
+                                                    .withValues(alpha: 0.6)
                                                 : const Color(0xFF3DA9FF),
                                             disabledBackgroundColor:
                                                 const Color(0xFF3DA9FF)
-                                                    .withValues(alpha: 0.5),
+                                                    .withValues(alpha: 0.6),
+                                            shadowColor:
+                                                const Color(0x663DA9FF),
+                                            elevation: 4,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
                                           ),
                                           child: _isLoading
                                               ? const SizedBox(
-                                                  height: 20,
-                                                  width: 20,
+                                                  height: 22,
+                                                  width: 22,
                                                   child:
                                                       CircularProgressIndicator(
-                                                    strokeWidth: 2,
+                                                    strokeWidth: 2.5,
                                                     valueColor:
                                                         AlwaysStoppedAnimation<
                                                             Color>(
@@ -234,35 +298,43 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                                                   style:
                                                       GoogleFonts.spaceGrotesk(
                                                     fontWeight: FontWeight.w700,
-                                                    fontSize: 16,
+                                                    fontSize: 15,
                                                   ),
                                                 ),
                                         ),
                                       ),
-                                      const SizedBox(height: 24),
                                       Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF040828),
+                                          color: const Color(0xFF0A0F32),
                                           border: Border.all(
                                             color: const Color(0xFFA8C9FF)
-                                                .withValues(alpha: 0.22),
+                                                .withValues(alpha: 0.25),
                                           ),
                                           borderRadius:
                                               BorderRadius.circular(14),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Color(0x1282E6FF),
+                                              blurRadius: 8,
+                                              offset: Offset(0, 2),
+                                            ),
+                                          ],
                                         ),
                                         child: Column(
                                           crossAxisAlignment:
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              'Tips for safer browsing:',
+                                              'Tips for Safer Browsing',
                                               style: GoogleFonts.spaceGrotesk(
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFFE7EDFF),
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF82E6FF),
+                                                fontSize: 12,
+                                                letterSpacing: 0.15,
                                               ),
                                             ),
-                                            const SizedBox(height: 8),
+                                            const SizedBox(height: 12),
                                             ...[
                                               'Always check the domain name carefully',
                                               'Look for HTTPS in the address bar',
@@ -271,15 +343,32 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                                               (tip) => Padding(
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                        vertical: 4),
-                                                child: Text(
-                                                  '• $tip',
-                                                  style:
-                                                      GoogleFonts.spaceGrotesk(
-                                                    fontSize: 13,
-                                                    color:
-                                                        const Color(0xFFCFDDFF),
-                                                  ),
+                                                        vertical: 7),
+                                                child: Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.check_circle,
+                                                      size: 16,
+                                                      color: Color(0xFF63F0A3),
+                                                    ),
+                                                    const SizedBox(width: 10),
+                                                    Expanded(
+                                                      child: Text(
+                                                        tip,
+                                                        style: GoogleFonts
+                                                            .spaceGrotesk(
+                                                          fontSize: 13,
+                                                          color: const Color(
+                                                              0xFFE2E8FF),
+                                                          height: 1.4,
+                                                          fontWeight:
+                                                              FontWeight.w400,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
                                             ),

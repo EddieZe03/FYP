@@ -5,6 +5,7 @@ import '../services/qr_scanner_service.dart';
 import '../services/api_service.dart';
 import '../widgets/analyzing_overlay.dart';
 import '../widgets/plexus_background.dart';
+import 'home_screen.dart';
 import 'result_screen.dart';
 
 class QrScanScreen extends StatefulWidget {
@@ -80,11 +81,28 @@ class _QrScanScreenState extends State<QrScanScreen> {
     if (!mounted) return;
 
     if (response.ok && response.result != null) {
-      Navigator.of(context).pushReplacement(
+      final action = await Navigator.of(context).push<ResultScreenAction>(
         MaterialPageRoute(
-          builder: (context) => ResultScreen(response: response),
+          builder: (context) => ResultScreen(
+            response: response,
+            source: ScanFlowSource.qr,
+          ),
         ),
       );
+
+      if (!mounted) return;
+
+      setState(() {
+        _isProcessing = false;
+        _scanStatus = 'Ready to scan';
+      });
+
+      if (action == ResultScreenAction.backHome) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false,
+        );
+      }
     } else {
       setState(() {
         _error = response.error ?? 'Prediction failed';
@@ -255,13 +273,52 @@ class _QrScanScreenState extends State<QrScanScreen> {
                                       TextField(
                                         controller: _urlController,
                                         enabled: !_isProcessing,
-                                        decoration: const InputDecoration(
+                                        decoration: InputDecoration(
                                           hintText: 'https://example.com',
-                                          prefixIcon: Icon(Icons.link,
+                                          hintStyle: GoogleFonts.spaceGrotesk(
+                                            color: const Color(0xFF6B7FA0),
+                                          ),
+                                          prefixIcon: const Icon(Icons.link,
                                               color: Color(0xFF82E6FF)),
+                                          filled: true,
+                                          fillColor: const Color(0xFF0A0F32),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFFA8C9FF),
+                                              width: 1.2,
+                                            ),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0x3FA8C9FF),
+                                              width: 1.2,
+                                            ),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0xFF82E6FF),
+                                              width: 1.5,
+                                            ),
+                                          ),
+                                          disabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(12),
+                                            borderSide: const BorderSide(
+                                              color: Color(0x2FA8C9FF),
+                                              width: 1,
+                                            ),
+                                          ),
                                         ),
                                         style: GoogleFonts.spaceGrotesk(
-                                            color: const Color(0xFFE7EDFF)),
+                                            color: const Color(0xFFF0F4FF),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500),
                                       ),
                                       const SizedBox(height: 16),
                                       if (_error != null)
@@ -302,19 +359,28 @@ class _QrScanScreenState extends State<QrScanScreen> {
                                                   _urlController.text),
                                           style: ElevatedButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
+                                                vertical: 17),
                                             backgroundColor: _isProcessing
                                                 ? const Color(0xFF3DA9FF)
-                                                    .withValues(alpha: 0.5)
+                                                    .withValues(alpha: 0.6)
                                                 : const Color(0xFF3DA9FF),
+                                            disabledBackgroundColor:
+                                                const Color(0xFF3DA9FF)
+                                                    .withValues(alpha: 0.6),
+                                            shadowColor: const Color(0x663DA9FF),
+                                            elevation: 4,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
                                           ),
                                           child: _isProcessing
                                               ? const SizedBox(
-                                                  height: 20,
-                                                  width: 20,
+                                                  height: 22,
+                                                  width: 22,
                                                   child:
                                                       CircularProgressIndicator(
-                                                    strokeWidth: 2,
+                                                    strokeWidth: 2.5,
                                                     valueColor:
                                                         AlwaysStoppedAnimation<
                                                             Color>(
@@ -322,7 +388,14 @@ class _QrScanScreenState extends State<QrScanScreen> {
                                                     ),
                                                   ),
                                                 )
-                                              : const Text('Scan QR Code'),
+                                              : Text(
+                                                  'Submit URL',
+                                                  style:
+                                                      GoogleFonts.spaceGrotesk(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 15,
+                                                  ),
+                                                ),
                                         ),
                                       ),
                                     ],
