@@ -83,30 +83,6 @@ class HomePage extends StatelessWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF82E6FF).withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
-                          color:
-                              const Color(0xFF82E6FF).withValues(alpha: 0.18),
-                        ),
-                      ),
-                      child: Text(
-                        'Phishing Detection for Mobile & Web',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFBDEBFF),
-                          letterSpacing: 0.25,
-                        ),
-                      ),
-                    ),
                     const SizedBox(height: 10),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 620),
