@@ -18,16 +18,16 @@ class HomePage extends StatelessWidget {
               constraints: const BoxConstraints(maxWidth: 860),
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 36),
                 decoration: BoxDecoration(
-                  color: const Color(0xBF080D3E),
-                  border: Border.all(color: const Color(0x48A8C9FF)),
+                  color: const Color(0xC2080D3E),
+                  border: Border.all(color: const Color(0x2AA8C9FF)),
                   borderRadius: BorderRadius.circular(28),
                   boxShadow: const [
                     BoxShadow(
-                      color: Color(0x80010314),
-                      blurRadius: 44,
-                      offset: Offset(0, 26),
+                      color: Color(0x55010314),
+                      blurRadius: 36,
+                      offset: Offset(0, 22),
                     ),
                   ],
                 ),
@@ -35,13 +35,27 @@ class HomePage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 126,
-                      height: 126,
-                      padding: const EdgeInsets.all(4),
+                      width: 128,
+                      height: 128,
+                      padding: const EdgeInsets.all(5),
                       decoration: BoxDecoration(
-                        color: const Color(0x14FFFFFF),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0x1AFFFFFF),
+                            Color(0x0FFFFFFF),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(26),
-                        border: Border.all(color: const Color(0x52FFFFFF)),
+                        border: Border.all(color: const Color(0x34FFFFFF)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x1A82E6FF),
+                            blurRadius: 12,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(22),
@@ -58,7 +72,7 @@ class HomePage extends StatelessWidget {
                       style: GoogleFonts.michroma(
                         fontSize: 34,
                         fontWeight: FontWeight.w700,
-                        height: 1.18,
+                        height: 1.15,
                         color: const Color(0xFFF5F9FF),
                         letterSpacing: 2.2,
                         shadows: const [
@@ -67,6 +81,30 @@ class HomePage extends StatelessWidget {
                             blurRadius: 18,
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF82E6FF).withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                          color:
+                              const Color(0xFF82E6FF).withValues(alpha: 0.18),
+                        ),
+                      ),
+                      child: Text(
+                        'Phishing Detection for Mobile & Web',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFBDEBFF),
+                          letterSpacing: 0.25,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -137,18 +175,19 @@ class _HomeActionButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: onTap,
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 12),
         foregroundColor: const Color(0xFF00133A),
-        backgroundColor: const Color(0xFF6BD3FF),
+        backgroundColor: const Color(0xFF7EDBFF),
+        shadowColor: const Color(0x557EDBFF),
+        elevation: 5,
         textStyle: GoogleFonts.spaceGrotesk(
-          fontSize: 14,
+          fontSize: 13.5,
           fontWeight: FontWeight.w700,
         ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(999),
+          side: const BorderSide(color: Color(0x33FFFFFF)),
         ),
-        shadowColor: const Color(0x596BD3FF),
-        elevation: 8,
       ),
       child: Text(
         title,

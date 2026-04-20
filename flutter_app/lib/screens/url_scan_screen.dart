@@ -91,10 +91,17 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                           child: Container(
                             clipBehavior: Clip.antiAlias,
                             decoration: BoxDecoration(
-                              color: const Color(0xBF080D3E),
+                              color: const Color(0xC2080D3E),
                               border:
-                                  Border.all(color: const Color(0x38A8C9FF)),
+                                  Border.all(color: const Color(0x2AA8C9FF)),
                               borderRadius: BorderRadius.circular(28),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x55010314),
+                                  blurRadius: 36,
+                                  offset: Offset(0, 22),
+                                ),
+                              ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -122,11 +129,11 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                                         width: 58,
                                         height: 58,
                                         decoration: BoxDecoration(
-                                          color: const Color(0x14FFFFFF),
+                                          color: const Color(0x0EFFFFFF),
                                           borderRadius:
                                               BorderRadius.circular(16),
                                           border: Border.all(
-                                              color: const Color(0x33FFFFFF)),
+                                              color: const Color(0x26FFFFFF)),
                                         ),
                                         child: const Icon(Icons.travel_explore,
                                             color: Color(0xFF82E6FF)),
