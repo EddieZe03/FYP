@@ -36,7 +36,7 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
       _error = null;
     });
 
-    final response = await ApiService.predictUrl(url);
+    final response = await ApiService.predictUrl(url, source: 'url');
 
     if (!mounted) return;
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../services/qr_scanner_service.dart';
 import '../services/api_service.dart';
 import '../widgets/analyzing_overlay.dart';
 import '../widgets/plexus_background.dart';
@@ -47,25 +46,26 @@ class _QrScanScreenState extends State<QrScanScreen> {
     _isProcessing = true;
 
     final scannedValue = barcode!.rawValue!;
-    final url = QrScannerService.normalizeUrl(scannedValue);
+    final payload = scannedValue.trim();
 
     setState(() {
-      _urlController.text = url;
-      _scanStatus = 'QR detected: $url';
+      _urlController.text = payload;
+      _scanStatus = 'QR detected';
     });
 
     // Auto-submit after brief delay
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (mounted) {
-      await _submitUrl(url);
+      await _submitUrl(payload);
     }
   }
 
   Future<void> _submitUrl(String url) async {
-    if (url.isEmpty) {
+    final candidate = url.trim();
+    if (candidate.isEmpty) {
       setState(() {
-        _error = 'Please provide a URL';
+        _error = 'Please provide QR content or URL';
         _isProcessing = false;
       });
       return;
@@ -76,7 +76,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       _error = null;
     });
 
-    final response = await ApiService.predictUrl(url);
+    final response = await ApiService.predictUrl(candidate, source: 'qr');
 
     if (!mounted) return;
 

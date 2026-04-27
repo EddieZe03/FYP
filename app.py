@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import html
 import hashlib
+import re
 from pathlib import Path
 import traceback
 from typing import Any
@@ -40,6 +41,8 @@ MODEL_CANDIDATE_PATHS = [
 
 FINAL_MODEL_PATH = BASE_DIR / "artifacts" / "ensemble_all_datasets_retry" / "soft_voting_ensemble.joblib"
 FINAL_THRESHOLD = 0.565
+UNCERTAIN_LOWER_BOUND = float(os.getenv("UNCERTAIN_LOWER_BOUND", "0.45"))
+UNCERTAIN_UPPER_BOUND = float(os.getenv("UNCERTAIN_UPPER_BOUND", "0.65"))
 WHOIS_CACHE_PATH = BASE_DIR / "artifacts" / "whois_cache.csv"
 MODEL_DISPLAY_NAME = "Soft Voting Ensemble (Retry Balanced Sample)"
 EXPECTED_FEATURE_COLUMNS = [
@@ -224,6 +227,129 @@ def _normalize_input_url(raw_url: str) -> str:
     if "://" in url:
         return url
     return f"http://{url}"
+
+
+def _is_probable_url(raw_text: str) -> bool:
+    """Best-effort URL detection for mixed QR payloads and plain text."""
+    text = html.unescape(raw_text.strip())
+    if not text:
+        return False
+
+    lowered = text.lower()
+    if lowered.startswith("http://") or lowered.startswith("https://"):
+        parsed = urlparse(text)
+        return bool(parsed.netloc)
+
+    # Accept obvious host-style strings such as www.example.com/path.
+    if text.startswith("www."):
+        return True
+
+    # Must include a dot-separated host token and no whitespace.
+    if any(ch.isspace() for ch in text):
+        return False
+
+    host_candidate = text.split("/", 1)[0].split("?", 1)[0]
+    if "." not in host_candidate:
+        return False
+    return bool(re.search(r"[A-Za-z]", host_candidate))
+
+
+def _normalize_qr_payload(raw_text: str) -> str:
+    """Normalize scanned QR payload text by removing whitespace separators."""
+    return "".join(raw_text.strip().split())
+
+
+def _parse_emvco_tlv(payload: str) -> dict[str, str]:
+    """Parse a flat EMVCo TLV payload into tag-value pairs."""
+    values: dict[str, str] = {}
+    i = 0
+    n = len(payload)
+
+    while i + 4 <= n:
+        tag = payload[i:i + 2]
+        length_text = payload[i + 2:i + 4]
+        if not length_text.isdigit():
+            break
+
+        length = int(length_text)
+        start = i + 4
+        end = start + length
+        if end > n:
+            break
+
+        values[tag] = payload[start:end]
+        i = end
+
+    return values
+
+
+def _is_probable_emvco_payload(raw_text: str) -> bool:
+    """Detect EMVCo-style merchant/payment QR payloads (including DuitNow)."""
+    payload = _normalize_qr_payload(raw_text)
+    if len(payload) < 24:
+        return False
+
+    if not payload.startswith("000201"):
+        return False
+
+    if not payload.isdigit() and not payload.isalnum():
+        return False
+
+    fields = _parse_emvco_tlv(payload)
+    if fields.get("00") != "01":
+        return False
+
+    # Common EMVCo payment markers: transaction currency (53), country code (58), CRC (63).
+    if "53" in fields and "58" in fields and "63" in fields:
+        return True
+
+    # Fallback marker for payment account templates in tags 26..51.
+    for tag_num in range(26, 52):
+        if f"{tag_num:02d}" in fields:
+            return True
+
+    return False
+
+
+def _emvco_summary(raw_text: str) -> str:
+    """Return a short user-facing summary from EMVCo fields when present."""
+    payload = _normalize_qr_payload(raw_text)
+    fields = _parse_emvco_tlv(payload)
+
+    merchant_name = fields.get("59", "")
+    merchant_city = fields.get("60", "")
+    country_code = fields.get("58", "")
+
+    parts: list[str] = []
+    if merchant_name:
+        parts.append(f"merchant: {merchant_name}")
+    if merchant_city:
+        parts.append(f"city: {merchant_city}")
+    if country_code:
+        parts.append(f"country: {country_code}")
+
+    if not parts:
+        return "Detected an EMVCo-style payment QR payload."
+
+    return "Detected an EMVCo-style payment QR payload (" + ", ".join(parts) + ")."
+
+
+def _emvco_details(raw_text: str) -> dict[str, str]:
+    """Return a compact set of useful EMVCo payment QR fields."""
+    payload = _normalize_qr_payload(raw_text)
+    fields = _parse_emvco_tlv(payload)
+
+    details: dict[str, str] = {}
+    if fields.get("59"):
+        details["merchant_name"] = fields["59"]
+    if fields.get("60"):
+        details["merchant_city"] = fields["60"]
+    if fields.get("58"):
+        details["country_code"] = fields["58"]
+    if fields.get("00"):
+        details["payload_format"] = fields["00"]
+
+    return details
 
 
 def _path_and_query_text(url: str) -> str:
@@ -568,6 +694,16 @@ def predict_url_label(url: str) -> tuple[str, float, str]:
             f"Trusted-domain override applied for {domain}. Model phishing score was {phishing_probability:.4f}.",
         )
 
+    if UNCERTAIN_LOWER_BOUND <= phishing_probability <= UNCERTAIN_UPPER_BOUND:
+        return (
+            "Uncertain",
+            phishing_probability,
+            (
+                "Borderline decision region: phishing probability is near the model "
+                f"boundary ({phishing_probability:.4f})."
+            ),
+        )
+
     label = "Phishing" if phishing_probability >= FINAL_THRESHOLD else "Legitimate"
     reason = f"Threshold decision at {FINAL_THRESHOLD:.6f}."
     return label, phishing_probability, reason
@@ -626,9 +762,70 @@ def _predict_and_render(raw_url: str, template_name: str) -> str:
         )
 
 
-def _predict_to_payload(raw_url: str) -> tuple[dict[str, Any], int]:
+def _predict_to_payload(raw_url: str, source: str = "url") -> tuple[dict[str, Any], int]:
     """Return structured JSON payload for mobile/API clients."""
-    url = _normalize_input_url(raw_url)
+    raw_value = str(raw_url).strip()
+    if not raw_value:
+        return {"ok": False, "error": "Please provide a URL."}, 400
+
+    source_normalized = source.strip().lower() if source else "url"
+
+    if source_normalized == "qr" and not _is_probable_url(raw_value):
+        if _is_probable_emvco_payload(raw_value):
+            details = _emvco_details(raw_value)
+            return (
+                {
+                    "ok": True,
+                    "input_url": raw_value,
+                    "normalized_url": raw_value,
+                    "result": {
+                        "badge": "PAYMENT QR",
+                        "label": "Payment QR Payload",
+                        "confidence": "N/A",
+                        "risk_level": "Verify In Payment App",
+                        "explanation": _emvco_summary(raw_value),
+                        "rule_trigger": "QR payload type gate applied (EMVCo payment payload detected).",
+                        "details": details,
+                        "recommendations": [
+                            "Review merchant/receiver details in the official payment app before confirming.",
+                            "Check amount, recipient name, and recent transaction history carefully.",
+                            "If the request is unexpected, verify through a trusted contact channel first.",
+                        ],
+                    },
+                    "model": MODEL_DISPLAY_NAME,
+                },
+                200,
+            )
+
+        return (
+            {
+                "ok": True,
+                "input_url": raw_value,
+                "normalized_url": raw_value,
+                "result": {
+                    "badge": "NON-URL QR",
+                    "label": "Uncertain",
+                    "confidence": "N/A",
+                    "risk_level": "Needs Manual Review",
+                    "explanation": (
+                        "The scanned QR content is not a standard web URL. "
+                        "It may be a payment payload (for example DuitNow/EMV format), "
+                        "which this URL phishing model cannot classify reliably."
+                    ),
+                    "rule_trigger": "QR payload type gate applied (non-URL content).",
+                    "details": {},
+                    "recommendations": [
+                        "Confirm payment details (merchant name, amount, receiver) inside the official app.",
+                        "Do not rely on URL phishing score for non-URL QR payloads.",
+                        "If unsure, verify with the recipient through a trusted channel.",
+                    ],
+                },
+                "model": MODEL_DISPLAY_NAME,
+            },
+            200,
+        )
+
+    url = _normalize_input_url(raw_value)
     if not url:
         return {"ok": False, "error": "Please provide a URL."}, 400
 
@@ -638,7 +835,7 @@ def _predict_to_payload(raw_url: str) -> tuple[dict[str, Any], int]:
         return (
             {
                 "ok": True,
-                "input_url": raw_url,
+                "input_url": raw_value,
                 "normalized_url": url,
                 "result": {
                     "badge": output["result_badge"],
@@ -680,7 +877,8 @@ def api_health() -> Any:
 def api_predict() -> Any:
     payload = request.get_json(silent=True) or {}
     raw_url = str(payload.get("url", "")).strip()
-    response, status_code = _predict_to_payload(raw_url)
+    source = str(payload.get("source", "url")).strip().lower()
+    response, status_code = _predict_to_payload(raw_url, source=source)
     return jsonify(response), status_code
 
 

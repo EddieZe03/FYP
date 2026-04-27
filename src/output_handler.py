@@ -10,6 +10,9 @@ from __future__ import annotations
 
 
 def _risk_level(label: str, confidence_percent: float) -> str:
+    if label == "Uncertain":
+        return "Needs Manual Review"
+
     if label == "Phishing":
         if confidence_percent >= 90:
             return "Critical"
@@ -62,6 +65,13 @@ def _create_user_friendly_rule_summary(technical_reason: str) -> str:
 
 
 def _recommendations(label: str, risk_level: str) -> list[str]:
+    if label == "Uncertain":
+        return [
+            "Result is borderline. Treat with caution and verify manually.",
+            "Open the destination only through official channels or trusted bookmarks.",
+            "Do not submit credentials or payment details until verified.",
+        ]
+
     if label == "Phishing":
         return [
             "Do not click or open the URL.",
@@ -84,8 +94,15 @@ def _recommendations(label: str, risk_level: str) -> list[str]:
 
 def format_output(label: str, phishing_probability: float, explanation: str) -> dict[str, object]:
     """Create a UI-ready output payload from raw model output."""
-    confidence = phishing_probability if label == "Phishing" else (1.0 - phishing_probability)
-    confidence_percent = confidence * 100.0
+    if label == "Phishing":
+        confidence = phishing_probability
+    elif label == "Legitimate":
+        confidence = 1.0 - phishing_probability
+    else:
+        # For uncertain outcomes, confidence reflects uncertainty distance from 50%.
+        confidence = 1.0 - (abs(phishing_probability - 0.5) * 2.0)
+
+    confidence_percent = max(0.0, min(confidence * 100.0, 100.0))
     risk_level = _risk_level(label, confidence_percent)
     explanation_text = explanation or ""
     explanation_lower = explanation_text.lower()
@@ -100,7 +117,11 @@ def format_output(label: str, phishing_probability: float, explanation: str) -> 
         rule_trigger = _create_user_friendly_rule_summary(explanation)
 
     return {
-        "result_badge": "PHISHING" if label == "Phishing" else "LEGITIMATE",
+        "result_badge": (
+            "PHISHING"
+            if label == "Phishing"
+            else ("LEGITIMATE" if label == "Legitimate" else "UNCERTAIN")
+        ),
         "result_label": label,
         "result_confidence": f"{confidence_percent:.2f}%",
         "risk_level": risk_level,

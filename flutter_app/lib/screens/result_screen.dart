@@ -31,6 +31,13 @@ class ResultScreen extends StatelessWidget {
     }
 
     final hasDecisionNotes = (result.explanation ?? '').trim().isNotEmpty;
+    final isUncertain = result.isUncertain;
+    final isPaymentPayload = result.isPaymentPayload;
+    final details = result.details ?? const <String, dynamic>{};
+    final analyzedValue = response.normalizedUrl ?? response.inputUrl ?? '';
+    final summaryText = _summaryText(result);
+    final summaryColor = _summaryColor(result);
+    final summaryIcon = _summaryIcon(result);
 
     return Scaffold(
       body: PlexusBackground(
@@ -93,10 +100,18 @@ class ResultScreen extends StatelessWidget {
                                     child: Icon(
                                       result.isPhishing
                                           ? Icons.warning_rounded
-                                          : Icons.shield_rounded,
+                                          : (isPaymentPayload
+                                              ? Icons.qr_code_2_rounded
+                                              : (isUncertain
+                                                  ? Icons.help_outline_rounded
+                                                  : Icons.shield_rounded)),
                                       color: result.isPhishing
                                           ? const Color(0xFFFFA0B0)
-                                          : const Color(0xFF82E6FF),
+                                          : (isPaymentPayload
+                                              ? const Color(0xFF9CEBFF)
+                                              : (isUncertain
+                                                  ? const Color(0xFFFFDDA1)
+                                                  : const Color(0xFF82E6FF))),
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -117,7 +132,7 @@ class ResultScreen extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 6),
                                         Text(
-                                          'The model has evaluated the submitted URL and produced the result below.',
+                                          'The model has evaluated the submitted content and produced the result below.',
                                           style: GoogleFonts.spaceGrotesk(
                                             fontSize: 12.8,
                                             color: const Color(0xFFBBC9EF),
@@ -147,10 +162,20 @@ class ResultScreen extends StatelessWidget {
                                                   const Color(0xFFFF9FB0),
                                                   const Color(0xFFFF6E85)
                                                 ]
-                                              : [
-                                                  const Color(0xFF9FFFD4),
-                                                  const Color(0xFF63F0A3)
-                                                ],
+                                              : (isPaymentPayload
+                                                  ? [
+                                                      const Color(0xFFA8F1FF),
+                                                      const Color(0xFF73D9FF)
+                                                    ]
+                                                  : (isUncertain
+                                                      ? [
+                                                          const Color(0xFFFFE39A),
+                                                          const Color(0xFFFFC564)
+                                                        ]
+                                                      : [
+                                                          const Color(0xFF9FFFD4),
+                                                          const Color(0xFF63F0A3)
+                                                        ])),
                                         ),
                                         borderRadius:
                                             BorderRadius.circular(999),
@@ -162,13 +187,60 @@ class ResultScreen extends StatelessWidget {
                                           fontWeight: FontWeight.w800,
                                           color: result.isPhishing
                                               ? const Color(0xFF2A0610)
-                                              : const Color(0xFF002211),
+                                              : (isPaymentPayload
+                                                  ? const Color(0xFF002234)
+                                                  : (isUncertain
+                                                      ? const Color(0xFF2B1A00)
+                                                      : const Color(0xFF002211))),
                                           letterSpacing: 0.35,
                                         ),
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 22),
+                                  const SizedBox(height: 16),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0A1434),
+                                      border: Border.all(
+                                        color: summaryColor.withValues(alpha: 0.28),
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6),
+                                          decoration: BoxDecoration(
+                                            color: summaryColor.withValues(alpha: 0.14),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            summaryIcon,
+                                            size: 16,
+                                            color: summaryColor,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            summaryText,
+                                            style: GoogleFonts.spaceGrotesk(
+                                              fontSize: 13,
+                                              height: 1.45,
+                                              color: const Color(0xFFEAF0FF),
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 18),
                                   Container(
                                     constraints: const BoxConstraints(
                                       minHeight: 132,
@@ -226,7 +298,11 @@ class ResultScreen extends StatelessWidget {
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
-                                                  'Analyzed URL',
+                                                  isPaymentPayload
+                                                    ? 'Payment QR Payload'
+                                                    : source == ScanFlowSource.qr
+                                                      ? 'Analyzed Content'
+                                                      : 'Analyzed URL',
                                                   style:
                                                       GoogleFonts.spaceGrotesk(
                                                     fontSize: 11.5,
@@ -241,9 +317,7 @@ class ResultScreen extends StatelessWidget {
                                             InkWell(
                                               onTap: () => _copyUrl(
                                                 context,
-                                                response.normalizedUrl ??
-                                                    response.inputUrl ??
-                                                    '',
+                                                analyzedValue,
                                               ),
                                               borderRadius:
                                                   BorderRadius.circular(999),
@@ -325,8 +399,7 @@ class ResultScreen extends StatelessWidget {
                                             alignment: Alignment.centerLeft,
                                             child: Text(
                                               response.normalizedUrl ??
-                                                  response.inputUrl ??
-                                                  '',
+                                                  response.inputUrl ?? '',
                                               style: GoogleFonts.spaceGrotesk(
                                                 fontSize: 13,
                                                 fontWeight: FontWeight.w600,
@@ -355,6 +428,10 @@ class ResultScreen extends StatelessWidget {
                                     icon: Icons.warning_outlined,
                                     color: result.riskColor,
                                   ),
+                                  if (isPaymentPayload && details.isNotEmpty) ...[
+                                    const SizedBox(height: 10),
+                                    _buildDetailCard(details),
+                                  ],
                                   const SizedBox(height: 18),
                                   if (hasDecisionNotes)
                                     Container(
@@ -623,6 +700,123 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildDetailCard(Map<String, dynamic> details) {
+    final entries = <MapEntry<String, String>>[];
+
+    void addEntry(String key, String label) {
+      final value = details[key];
+      if (value is String && value.trim().isNotEmpty) {
+        entries.add(MapEntry(label, value.trim()));
+      }
+    }
+
+    addEntry('merchant_name', 'Merchant');
+    addEntry('merchant_city', 'City');
+    addEntry('country_code', 'Country');
+    addEntry('payload_format', 'Format');
+
+    if (entries.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF08153A),
+        border: Border.all(
+          color: const Color(0xFF8FE7FF).withValues(alpha: 0.28),
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.receipt_long_rounded,
+                size: 15,
+                color: Color(0xFF8FE7FF),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Detected Payment Details',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF8FE7FF),
+                  letterSpacing: 0.24,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...entries.map(
+            (entry) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 72,
+                    child: Text(
+                      entry.key,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF9CC7FF),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      entry.value,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12.5,
+                        color: const Color(0xFFE8EEFF),
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _summaryText(PredictionResult result) {
+    if (result.isPhishing) {
+      return 'This result is high risk. Treat the URL as unsafe and avoid entering credentials or payment details.';
+    }
+
+    if (result.isPaymentPayload) {
+      return 'This is a payment QR payload, not a normal website link. Verify the merchant, amount, and receiver inside the official payment app before confirming.';
+    }
+
+    if (result.isUncertain) {
+      return 'This result is borderline. Verify the destination manually before opening or sharing anything sensitive.';
+    }
+
+    return 'This URL looks legitimate based on the current model and rules. Continue with standard caution.';
+  }
+
+  Color _summaryColor(PredictionResult result) {
+    if (result.isPhishing) return const Color(0xFFFF7C92);
+    if (result.isPaymentPayload) return const Color(0xFF73D9FF);
+    if (result.isUncertain) return const Color(0xFFFFC564);
+    return const Color(0xFF63F0A3);
+  }
+
+  IconData _summaryIcon(PredictionResult result) {
+    if (result.isPhishing) return Icons.warning_rounded;
+    if (result.isPaymentPayload) return Icons.payments_rounded;
+    if (result.isUncertain) return Icons.help_outline_rounded;
+    return Icons.verified_rounded;
+  }
+
   Future<void> _copyUrl(BuildContext context, String url) async {
     if (url.isEmpty) return;
 
@@ -632,7 +826,7 @@ class ResultScreen extends StatelessWidget {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Analyzed URL copied'),
+        content: Text('Analyzed content copied'),
         behavior: SnackBarBehavior.floating,
         duration: Duration(seconds: 2),
         backgroundColor: Color(0xFF0A0F32),

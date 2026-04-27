@@ -1,5 +1,6 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/prediction_model.dart';
 
@@ -38,13 +39,13 @@ class ApiService {
     return trimmed;
   }
 
-  static Future<PredictionResponse> predictUrl(String url) async {
+  static Future<PredictionResponse> predictUrl(String url, {String source = 'url'}) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/predict'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'url': url}),
-      ).timeout(const Duration(seconds: 10));
+        body: jsonEncode({'url': url, 'source': source}),
+      ).timeout(const Duration(seconds: 45));
 
       if (response.statusCode == 200) {
         return PredictionResponse.fromJson(jsonDecode(response.body));
@@ -54,6 +55,11 @@ class ApiService {
           error: 'Server error: ${response.statusCode}',
         );
       }
+    } on TimeoutException {
+      return PredictionResponse(
+        ok: false,
+        error: 'Request timed out. The backend may be offline or still warming up. Please try again in a few seconds.',
+      );
     } catch (e) {
       return PredictionResponse(
         ok: false,
@@ -66,7 +72,7 @@ class ApiService {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/api/health'),
-      ).timeout(const Duration(seconds: 5));
+      ).timeout(const Duration(seconds: 20));
       return response.statusCode == 200;
     } catch (e) {
       return false;
