@@ -1,0 +1,13 @@
+[Unit]
+Description=Phish Guard Cloudflare Quick Tunnel
+After=phish-guard-backend.service network-online.target
+Wants=phish-guard-backend.service network-online.target
+
+[Service]
+Type=simple
+ExecStart=/workspaces/FYP/scripts/run_cloudflared_quick_tunnel.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

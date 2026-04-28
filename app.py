@@ -3,12 +3,15 @@ from __future__ import annotations
 import os
 import html
 import hashlib
+import json
 import re
+import time
 from pathlib import Path
 import traceback
 from typing import Any
+from urllib.parse import urlencode
 from urllib.parse import urlparse
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 import joblib
 import pandas as pd
@@ -75,6 +78,29 @@ EXPECTED_FEATURE_COLUMNS = [
 _MODEL: Any | None = None
 _MODEL_PATH: Path | None = None
 PHISHING_THRESHOLD = float(os.getenv("PHISHING_THRESHOLD", str(FINAL_THRESHOLD)))
+THREAT_INTEL_ENABLED = os.getenv("THREAT_INTEL_ENABLED", "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+THREAT_INTEL_URLHAUS_ENABLED = os.getenv("THREAT_INTEL_URLHAUS_ENABLED", "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+THREAT_INTEL_TIMEOUT_SEC = float(os.getenv("THREAT_INTEL_TIMEOUT_SEC", "2.0"))
+THREAT_INTEL_CACHE_TTL_SEC = int(os.getenv("THREAT_INTEL_CACHE_TTL_SEC", "21600"))
+THREAT_INTEL_MODEL_WEIGHT = float(os.getenv("THREAT_INTEL_MODEL_WEIGHT", "0.72"))
+THREAT_INTEL_CACHE_PATH = Path(
+    os.getenv(
+        "THREAT_INTEL_CACHE_PATH",
+        str(BASE_DIR / "artifacts" / "threat_intel_cache.json"),
+    )
+).expanduser()
+
+_THREAT_INTEL_CACHE: dict[str, dict[str, Any]] | None = None
 
 TRUSTED_DOMAINS = {
     "youtube.com",
@@ -145,6 +171,208 @@ HIGH_RISK_PATH_TOKENS = {
     "secure",
     "billing",
 }
+
+
+def _load_threat_intel_cache() -> dict[str, dict[str, Any]]:
+    global _THREAT_INTEL_CACHE
+
+    if _THREAT_INTEL_CACHE is not None:
+        return _THREAT_INTEL_CACHE
+
+    cache: dict[str, dict[str, Any]] = {}
+    try:
+        if THREAT_INTEL_CACHE_PATH.exists() and THREAT_INTEL_CACHE_PATH.is_file():
+            loaded = json.loads(THREAT_INTEL_CACHE_PATH.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                for key, value in loaded.items():
+                    if isinstance(key, str) and isinstance(value, dict):
+                        cache[key] = value
+    except Exception:
+        app.logger.warning("Threat-intel cache load failed. Starting with an empty cache.")
+
+    _THREAT_INTEL_CACHE = cache
+    return _THREAT_INTEL_CACHE
+
+
+def _save_threat_intel_cache() -> None:
+    cache = _load_threat_intel_cache()
+    try:
+        THREAT_INTEL_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        THREAT_INTEL_CACHE_PATH.write_text(json.dumps(cache), encoding="utf-8")
+    except Exception:
+        app.logger.warning("Threat-intel cache save failed.")
+
+
+def _get_cached_threat_intel(url: str) -> dict[str, Any] | None:
+    cache = _load_threat_intel_cache()
+    item = cache.get(url)
+    if not isinstance(item, dict):
+        return None
+
+    ts = item.get("timestamp")
+    if not isinstance(ts, (int, float)):
+        return None
+
+    if time.time() - float(ts) > THREAT_INTEL_CACHE_TTL_SEC:
+        return None
+
+    cached_result = item.get("result")
+    if isinstance(cached_result, dict):
+        return cached_result
+    return None
+
+
+def _set_cached_threat_intel(url: str, result: dict[str, Any]) -> None:
+    cache = _load_threat_intel_cache()
+    cache[url] = {
+        "timestamp": time.time(),
+        "result": result,
+    }
+    _save_threat_intel_cache()
+
+
+def _urlhaus_lookup(url: str) -> dict[str, Any]:
+    started_at = time.perf_counter()
+    try:
+        payload = urlencode({"url": url}).encode("utf-8")
+        request_obj = Request(
+            "https://urlhaus-api.abuse.ch/v1/url/",
+            data=payload,
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": "PhishGuardThreatIntel/1.0",
+            },
+            method="POST",
+        )
+        with urlopen(request_obj, timeout=THREAT_INTEL_TIMEOUT_SEC) as response:
+            body = response.read().decode("utf-8", errors="ignore")
+
+        parsed = json.loads(body)
+        query_status = str(parsed.get("query_status", "")).lower()
+        is_malicious = query_status == "ok"
+
+        return {
+            "checked": True,
+            "provider": "urlhaus",
+            "verdict": "malicious" if is_malicious else "not_listed",
+            "malicious": is_malicious,
+            "confidence": 1.0 if is_malicious else 0.0,
+            "reason": (
+                "URL is listed in URLhaus threat feed."
+                if is_malicious
+                else "URL not found in URLhaus threat feed."
+            ),
+            "latency_ms": round((time.perf_counter() - started_at) * 1000.0, 2),
+        }
+    except Exception as exc:
+        return {
+            "checked": False,
+            "provider": "urlhaus",
+            "verdict": "unknown",
+            "malicious": False,
+            "confidence": 0.0,
+            "reason": f"Threat feed unavailable: {exc}",
+            "latency_ms": round((time.perf_counter() - started_at) * 1000.0, 2),
+        }
+
+
+def _check_threat_intel(url: str) -> dict[str, Any]:
+    if not THREAT_INTEL_ENABLED:
+        return {
+            "checked": False,
+            "provider": "disabled",
+            "verdict": "unknown",
+            "malicious": False,
+            "confidence": 0.0,
+            "reason": "Threat intelligence disabled.",
+            "latency_ms": 0.0,
+            "cache_hit": False,
+        }
+
+    cached = _get_cached_threat_intel(url)
+    if cached is not None:
+        cached_copy = dict(cached)
+        cached_copy["cache_hit"] = True
+        return cached_copy
+
+    if THREAT_INTEL_URLHAUS_ENABLED:
+        result = _urlhaus_lookup(url)
+    else:
+        result = {
+            "checked": False,
+            "provider": "none",
+            "verdict": "unknown",
+            "malicious": False,
+            "confidence": 0.0,
+            "reason": "No threat-intel provider enabled.",
+            "latency_ms": 0.0,
+        }
+
+    result["cache_hit"] = False
+    _set_cached_threat_intel(url, result)
+    return result
+
+
+def _apply_intel_fusion(
+    model_label: str,
+    model_score: float,
+    model_reason: str,
+    intel: dict[str, Any],
+) -> tuple[str, float, str, bool]:
+    # Conservative fusion strategy:
+    # - Intel positives can escalate risk.
+    # - Non-listed/unknown intel does not reduce model risk.
+    if not bool(intel.get("malicious", False)):
+        return model_label, model_score, model_reason, False
+
+    fused_score = max(
+        model_score,
+        (THREAT_INTEL_MODEL_WEIGHT * model_score)
+        + ((1.0 - THREAT_INTEL_MODEL_WEIGHT) * 1.0),
+    )
+
+    fused_label = model_label
+    fused_reason = model_reason
+
+    if fused_score >= FINAL_THRESHOLD:
+        fused_label = "Phishing"
+
+    if (
+        fused_label != model_label
+        or "urlhaus" in str(intel.get("provider", "")).lower()
+    ):
+        fused_reason = (
+            f"{model_reason} Threat-intel escalation applied: {intel.get('reason', '')} "
+            f"(fused score={fused_score:.4f})."
+        ).strip()
+
+    return fused_label, fused_score, fused_reason, True
+
+
+def _run_hybrid_detection(url: str) -> dict[str, Any]:
+    started_at = time.perf_counter()
+    model_label, model_score, model_reason = predict_url_label(url)
+    model_inference_ms = (time.perf_counter() - started_at) * 1000.0
+
+    intel = _check_threat_intel(url)
+    fused_label, fused_score, fused_reason, fusion_applied = _apply_intel_fusion(
+        model_label,
+        model_score,
+        model_reason,
+        intel,
+    )
+
+    return {
+        "label": fused_label,
+        "phishing_score": fused_score,
+        "reason": fused_reason,
+        "model_label": model_label,
+        "model_phishing_score": model_score,
+        "model_reason": model_reason,
+        "model_inference_ms": round(model_inference_ms, 2),
+        "threat_intel": intel,
+        "fusion_applied": fusion_applied,
+    }
 
 
 def _resolve_model_path() -> Path:
@@ -259,6 +487,14 @@ def _normalize_qr_payload(raw_text: str) -> str:
     return "".join(raw_text.strip().split())
 
 
+def _candidate_emvco_payload(raw_text: str) -> str:
+    """Extract EMVCo candidate from raw QR text (allowing URI-style prefixes)."""
+    payload = _normalize_qr_payload(raw_text)
+    # Some wallets expose payment payload as http://<payload> or https://<payload>.
+    payload = re.sub(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", "", payload)
+    return payload
+
+
 def _parse_emvco_tlv(payload: str) -> dict[str, str]:
     """Parse a flat EMVCo TLV payload into tag-value pairs."""
     values: dict[str, str] = {}
@@ -285,18 +521,18 @@ def _parse_emvco_tlv(payload: str) -> dict[str, str]:
 
 def _is_probable_emvco_payload(raw_text: str) -> bool:
     """Detect EMVCo-style merchant/payment QR payloads (including DuitNow)."""
-    payload = _normalize_qr_payload(raw_text)
+    payload = _candidate_emvco_payload(raw_text)
     if len(payload) < 24:
         return False
 
-    if not payload.startswith("000201"):
+    if not payload.startswith("0002"):
         return False
 
     if not payload.isdigit() and not payload.isalnum():
         return False
 
     fields = _parse_emvco_tlv(payload)
-    if fields.get("00") != "01":
+    if fields.get("00") not in {"01", "02"}:
         return False
 
     # Common EMVCo payment markers: transaction currency (53), country code (58), CRC (63).
@@ -313,7 +549,7 @@ def _is_probable_emvco_payload(raw_text: str) -> bool:
 
 def _emvco_summary(raw_text: str) -> str:
     """Return a short user-facing summary from EMVCo fields when present."""
-    payload = _normalize_qr_payload(raw_text)
+    payload = _candidate_emvco_payload(raw_text)
     fields = _parse_emvco_tlv(payload)
 
     merchant_name = fields.get("59", "")
@@ -336,7 +572,7 @@ def _emvco_summary(raw_text: str) -> str:
 
 def _emvco_details(raw_text: str) -> dict[str, str]:
     """Return a compact set of useful EMVCo payment QR fields."""
-    payload = _normalize_qr_payload(raw_text)
+    payload = _candidate_emvco_payload(raw_text)
     fields = _parse_emvco_tlv(payload)
 
     details: dict[str, str] = {}
@@ -555,7 +791,7 @@ def predict_url_label(url: str) -> tuple[str, float, str]:
     features = extract_features_from_urls(
         pd.Series([url]),
         whois_cache_path=WHOIS_CACHE_PATH,
-        whois_timeout=0.2,
+        whois_timeout=1,
         whois_max_lookups=1,
         whois_max_errors=1,
         dns_timeout=0.2,
@@ -738,8 +974,19 @@ def _predict_and_render(raw_url: str, template_name: str) -> str:
             model_info=MODEL_DISPLAY_NAME,
         )
 
+    if not _is_probable_url(raw_url):
+        return render_template(
+            template_name,
+            error_text="Please enter a full URL such as https://example.com.",
+            input_url=raw_url,
+            model_info=MODEL_DISPLAY_NAME,
+        )
+
     try:
-        label, phishing_probability, reason = predict_url_label(url)
+        detection = _run_hybrid_detection(url)
+        label = str(detection["label"])
+        phishing_probability = float(detection["phishing_score"])
+        reason = str(detection["reason"])
         output = format_output(label, phishing_probability, reason)
         return render_template(
             template_name,
@@ -768,69 +1015,25 @@ def _predict_to_payload(raw_url: str, source: str = "url") -> tuple[dict[str, An
     if not raw_value:
         return {"ok": False, "error": "Please provide a URL."}, 400
 
-    source_normalized = source.strip().lower() if source else "url"
+    if source != "qr" and not _is_probable_url(raw_value):
+        return {
+            "ok": False,
+            "error": "Please enter a full URL such as https://example.com.",
+        }, 400
 
-    if source_normalized == "qr" and not _is_probable_url(raw_value):
-        if _is_probable_emvco_payload(raw_value):
-            details = _emvco_details(raw_value)
-            return (
-                {
-                    "ok": True,
-                    "input_url": raw_value,
-                    "normalized_url": raw_value,
-                    "result": {
-                        "badge": "PAYMENT QR",
-                        "label": "Payment QR Payload",
-                        "confidence": "N/A",
-                        "risk_level": "Verify In Payment App",
-                        "explanation": _emvco_summary(raw_value),
-                        "rule_trigger": "QR payload type gate applied (EMVCo payment payload detected).",
-                        "details": details,
-                        "recommendations": [
-                            "Review merchant/receiver details in the official payment app before confirming.",
-                            "Check amount, recipient name, and recent transaction history carefully.",
-                            "If the request is unexpected, verify through a trusted contact channel first.",
-                        ],
-                    },
-                    "model": MODEL_DISPLAY_NAME,
-                },
-                200,
-            )
-
-        return (
-            {
-                "ok": True,
-                "input_url": raw_value,
-                "normalized_url": raw_value,
-                "result": {
-                    "badge": "NON-URL QR",
-                    "label": "Uncertain",
-                    "confidence": "N/A",
-                    "risk_level": "Needs Manual Review",
-                    "explanation": (
-                        "The scanned QR content is not a standard web URL. "
-                        "It may be a payment payload (for example DuitNow/EMV format), "
-                        "which this URL phishing model cannot classify reliably."
-                    ),
-                    "rule_trigger": "QR payload type gate applied (non-URL content).",
-                    "details": {},
-                    "recommendations": [
-                        "Confirm payment details (merchant name, amount, receiver) inside the official app.",
-                        "Do not rely on URL phishing score for non-URL QR payloads.",
-                        "If unsure, verify with the recipient through a trusted channel.",
-                    ],
-                },
-                "model": MODEL_DISPLAY_NAME,
-            },
-            200,
-        )
-
+    # Keep a single inference path for both URL input and QR payloads.
+    # QR scans are normalized into a URL-shaped string before ensemble inference.
     url = _normalize_input_url(raw_value)
     if not url:
         return {"ok": False, "error": "Please provide a URL."}, 400
 
     try:
-        label, phishing_probability, reason = predict_url_label(url)
+        started_at = time.perf_counter()
+        detection = _run_hybrid_detection(url)
+        inference_ms = (time.perf_counter() - started_at) * 1000.0
+        label = str(detection["label"])
+        phishing_probability = float(detection["phishing_score"])
+        reason = str(detection["reason"])
         output = format_output(label, phishing_probability, reason)
         return (
             {
@@ -841,11 +1044,22 @@ def _predict_to_payload(raw_url: str, source: str = "url") -> tuple[dict[str, An
                     "badge": output["result_badge"],
                     "label": output["result_label"],
                     "confidence": output["result_confidence"],
+                    "phishing_score": round(phishing_probability, 6),
+                    "model_phishing_score": round(
+                        float(detection["model_phishing_score"]),
+                        6,
+                    ),
+                    "fused_phishing_score": round(phishing_probability, 6),
+                    "threshold": FINAL_THRESHOLD,
                     "risk_level": output["risk_level"],
                     "explanation": output["explanation_text"],
                     "rule_trigger": output["rule_trigger"],
                     "recommendations": output["recommendations"],
+                    "threat_intel": detection["threat_intel"],
+                    "fusion_applied": bool(detection["fusion_applied"]),
                 },
+                "inference_ms": round(inference_ms, 2),
+                "model_inference_ms": detection["model_inference_ms"],
                 "model": MODEL_DISPLAY_NAME,
             },
             200,
