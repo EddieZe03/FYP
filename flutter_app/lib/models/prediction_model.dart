@@ -128,6 +128,7 @@ class PredictionResult {
 
   Color get riskColor {
     final risk = riskLevel.toLowerCase();
+    if (risk.contains('critical')) return const Color(0xFFFF6978);
     if (risk.contains('manual') || risk.contains('review')) {
       return const Color(0xFFFFD26F);
     }
