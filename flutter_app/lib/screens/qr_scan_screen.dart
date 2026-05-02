@@ -17,6 +17,7 @@ class QrScanScreen extends StatefulWidget {
 
 class _QrScanScreenState extends State<QrScanScreen> {
   final TextEditingController _urlController = TextEditingController();
+  final FocusNode _urlFocusNode = FocusNode();
   MobileScannerController? _cameraController;
   bool _isProcessing = false;
   String? _error;
@@ -35,6 +36,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
   void dispose() {
     _cameraController?.dispose();
     _urlController.dispose();
+    _urlFocusNode.dispose();
     super.dispose();
   }
 
@@ -115,7 +117,15 @@ class _QrScanScreenState extends State<QrScanScreen> {
       setState(() {
         _isProcessing = false;
         _scanStatus = 'Ready to scan';
+        if (action == ResultScreenAction.scanAgain) {
+          _urlController.clear();
+          _error = null;
+        }
       });
+
+      if (action == ResultScreenAction.scanAgain) {
+        FocusScope.of(context).requestFocus(_urlFocusNode);
+      }
 
       if (action == ResultScreenAction.backHome) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -299,6 +309,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                                       const SizedBox(height: 12),
                                       TextField(
                                         controller: _urlController,
+                                        focusNode: _urlFocusNode,
                                         enabled: !_isProcessing,
                                         decoration: InputDecoration(
                                           hintText: 'https://example.com',

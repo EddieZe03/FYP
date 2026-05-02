@@ -16,12 +16,14 @@ class UrlScanScreen extends StatefulWidget {
 
 class _UrlScanScreenState extends State<UrlScanScreen> {
   final TextEditingController _urlController = TextEditingController();
+  final FocusNode _urlFocusNode = FocusNode();
   bool _isLoading = false;
   String? _error;
 
   @override
   void dispose() {
     _urlController.dispose();
+    _urlFocusNode.dispose();
     super.dispose();
   }
 
@@ -60,7 +62,15 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
 
       setState(() {
         _isLoading = false;
+        if (action == ResultScreenAction.scanAgain) {
+          _urlController.clear();
+          _error = null;
+        }
       });
+
+      if (action == ResultScreenAction.scanAgain) {
+        FocusScope.of(context).requestFocus(_urlFocusNode);
+      }
 
       if (action == ResultScreenAction.backHome) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -190,6 +200,7 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
                                       const SizedBox(height: 14),
                                       TextField(
                                         controller: _urlController,
+                                        focusNode: _urlFocusNode,
                                         enabled: !_isLoading,
                                         decoration: InputDecoration(
                                           hintText: 'https://example.com',
