@@ -1,0 +1,40 @@
+{
+  "timestamp": "2026-03-25T03:24:29.203236",
+  "inference_performance": {
+    "10": {
+      "total_time_sec": 0.16119813919067383,
+      "per_url_ms": 16.119813919067383,
+      "throughput_urls_per_sec": 62.03545555926959
+    },
+    "50": {
+      "total_time_sec": 0.0535581111907959,
+      "per_url_ms": 1.071162223815918,
+      "throughput_urls_per_sec": 933.5654093901771
+    },
+    "100": {
+      "total_time_sec": 0.043776750564575195,
+      "per_url_ms": 0.43776750564575195,
+      "throughput_urls_per_sec": 2284.317559214217
+    }
+  },
+  "memory": {
+    "in_memory_mb": 4.57763671875e-05,
+    "file_size_mb": 198.9986114501953
+  },
+  "properties": {
+    "confidence_stats": {
+      "mean": 0.881036101179,
+      "min": 0.825211603188509,
+      "max": 0.9051684589674363,
+      "std": 0.02303497684831642
+    },
+    "phishing_distribution": {
+      "mean": 0.881036101179,
+      "phishing_count": 20,
+      "legitimate_count": 0
+    }
+  },
+  "consistency": {
+    "consistency": "PASS"
+  }
+}

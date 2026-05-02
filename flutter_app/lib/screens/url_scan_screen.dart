@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/qr_scanner_service.dart';
 import '../widgets/analyzing_overlay.dart';
 import '../widgets/plexus_background.dart';
 import 'home_screen.dart';
@@ -28,6 +29,11 @@ class _UrlScanScreenState extends State<UrlScanScreen> {
     final url = _urlController.text.trim();
     if (url.isEmpty) {
       setState(() => _error = 'Please enter a URL');
+      return;
+    }
+
+    if (!QrScannerService.isProbableUrl(url)) {
+      setState(() => _error = 'Please enter a full URL such as https://example.com');
       return;
     }
 

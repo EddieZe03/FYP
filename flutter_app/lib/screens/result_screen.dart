@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../models/prediction_model.dart';
 import '../widgets/plexus_background.dart';
 
@@ -24,17 +25,13 @@ class ResultScreen extends StatelessWidget {
     if (result == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Error')),
-        body: Center(
-          child: Text(response.error ?? 'Unknown error'),
-        ),
+        body: Center(child: Text(response.error ?? 'Unknown error')),
       );
     }
 
+    final analyzedValue = response.normalizedUrl ?? response.inputUrl ?? '';
     final hasDecisionNotes = (result.explanation ?? '').trim().isNotEmpty;
     final isUncertain = result.isUncertain;
-    final isPaymentPayload = result.isPaymentPayload;
-    final details = result.details ?? const <String, dynamic>{};
-    final analyzedValue = response.normalizedUrl ?? response.inputUrl ?? '';
     final summaryText = _summaryText(result);
     final summaryColor = _summaryColor(result);
     final summaryIcon = _summaryIcon(result);
@@ -72,7 +69,9 @@ class ResultScreen extends StatelessWidget {
                           children: [
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 28, vertical: 22),
+                                horizontal: 28,
+                                vertical: 22,
+                              ),
                               decoration: const BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topLeft,
@@ -95,23 +94,20 @@ class ResultScreen extends StatelessWidget {
                                       color: const Color(0x0EFFFFFF),
                                       borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
-                                          color: const Color(0x26FFFFFF)),
+                                        color: const Color(0x26FFFFFF),
+                                      ),
                                     ),
                                     child: Icon(
                                       result.isPhishing
                                           ? Icons.warning_rounded
-                                          : (isPaymentPayload
-                                              ? Icons.qr_code_2_rounded
-                                              : (isUncertain
-                                                  ? Icons.help_outline_rounded
-                                                  : Icons.shield_rounded)),
+                                          : (isUncertain
+                                              ? Icons.help_outline_rounded
+                                              : Icons.shield_rounded),
                                       color: result.isPhishing
                                           ? const Color(0xFFFFA0B0)
-                                          : (isPaymentPayload
-                                              ? const Color(0xFF9CEBFF)
-                                              : (isUncertain
-                                                  ? const Color(0xFFFFDDA1)
-                                                  : const Color(0xFF82E6FF))),
+                                          : (isUncertain
+                                              ? const Color(0xFFFFDDA1)
+                                              : const Color(0xFF82E6FF)),
                                     ),
                                   ),
                                   const SizedBox(width: 16),
@@ -154,28 +150,25 @@ class ResultScreen extends StatelessWidget {
                                   Center(
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(
-                                          horizontal: 18, vertical: 10),
+                                        horizontal: 18,
+                                        vertical: 10,
+                                      ),
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: result.isPhishing
                                               ? [
                                                   const Color(0xFFFF9FB0),
-                                                  const Color(0xFFFF6E85)
+                                                  const Color(0xFFFF6E85),
                                                 ]
-                                              : (isPaymentPayload
+                                              : (isUncertain
                                                   ? [
-                                                      const Color(0xFFA8F1FF),
-                                                      const Color(0xFF73D9FF)
+                                                      const Color(0xFFFFE39A),
+                                                      const Color(0xFFFFC564),
                                                     ]
-                                                  : (isUncertain
-                                                      ? [
-                                                          const Color(0xFFFFE39A),
-                                                          const Color(0xFFFFC564)
-                                                        ]
-                                                      : [
-                                                          const Color(0xFF9FFFD4),
-                                                          const Color(0xFF63F0A3)
-                                                        ])),
+                                                  : [
+                                                      const Color(0xFF9FFFD4),
+                                                      const Color(0xFF63F0A3),
+                                                    ]),
                                         ),
                                         borderRadius:
                                             BorderRadius.circular(999),
@@ -187,11 +180,9 @@ class ResultScreen extends StatelessWidget {
                                           fontWeight: FontWeight.w800,
                                           color: result.isPhishing
                                               ? const Color(0xFF2A0610)
-                                              : (isPaymentPayload
-                                                  ? const Color(0xFF002234)
-                                                  : (isUncertain
-                                                      ? const Color(0xFF2B1A00)
-                                                      : const Color(0xFF002211))),
+                                              : (isUncertain
+                                                  ? const Color(0xFF2B1A00)
+                                                  : const Color(0xFF002211)),
                                           letterSpacing: 0.35,
                                         ),
                                       ),
@@ -215,7 +206,9 @@ class ResultScreen extends StatelessWidget {
                                         Container(
                                           padding: const EdgeInsets.all(6),
                                           decoration: BoxDecoration(
-                                            color: summaryColor.withValues(alpha: 0.14),
+                                            color: summaryColor.withValues(
+                                              alpha: 0.14,
+                                            ),
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                           ),
@@ -285,10 +278,10 @@ class ResultScreen extends StatelessWidget {
                                                     color:
                                                         const Color(0xFF82E6FF)
                                                             .withValues(
-                                                                alpha: 0.15),
+                                                              alpha: 0.15,
+                                                            ),
                                                     borderRadius:
-                                                        BorderRadius.circular(
-                                                            6),
+                                                        BorderRadius.circular(6),
                                                   ),
                                                   child: const Icon(
                                                     Icons.link_rounded,
@@ -298,9 +291,7 @@ class ResultScreen extends StatelessWidget {
                                                 ),
                                                 const SizedBox(width: 8),
                                                 Text(
-                                                  isPaymentPayload
-                                                    ? 'Payment QR Payload'
-                                                    : source == ScanFlowSource.qr
+                                                  source == ScanFlowSource.qr
                                                       ? 'Analyzed Content'
                                                       : 'Analyzed URL',
                                                   style:
@@ -331,14 +322,13 @@ class ResultScreen extends StatelessWidget {
                                                   color: const Color(0xFF82E6FF)
                                                       .withValues(alpha: 0.10),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                    999,
-                                                  ),
+                                                      BorderRadius.circular(999),
                                                   border: Border.all(
                                                     color:
                                                         const Color(0xFF82E6FF)
                                                             .withValues(
-                                                                alpha: 0.16),
+                                                              alpha: 0.16,
+                                                            ),
                                                   ),
                                                 ),
                                                 child: Row(
@@ -359,7 +349,8 @@ class ResultScreen extends StatelessWidget {
                                                         fontWeight:
                                                             FontWeight.w700,
                                                         color: const Color(
-                                                            0xFFBDEBFF),
+                                                          0xFFBDEBFF,
+                                                        ),
                                                         letterSpacing: 0.12,
                                                       ),
                                                     ),
@@ -421,6 +412,24 @@ class ResultScreen extends StatelessWidget {
                                     value: result.confidence,
                                     icon: Icons.percent,
                                   ),
+                                  if (result.phishingScore != null) ...[
+                                    const SizedBox(height: 10),
+                                    _buildMetricCard(
+                                      label: 'Phishing Score',
+                                      value: result.phishingScore!
+                                          .toStringAsFixed(4),
+                                      icon: Icons.analytics_outlined,
+                                    ),
+                                  ],
+                                  if (response.inferenceMs != null) ...[
+                                    const SizedBox(height: 10),
+                                    _buildMetricCard(
+                                      label: 'Inference Time',
+                                      value:
+                                          '${response.inferenceMs!.toStringAsFixed(2)} ms',
+                                      icon: Icons.timer_outlined,
+                                    ),
+                                  ],
                                   const SizedBox(height: 10),
                                   _buildMetricCard(
                                     label: 'Risk Level',
@@ -428,9 +437,9 @@ class ResultScreen extends StatelessWidget {
                                     icon: Icons.warning_outlined,
                                     color: result.riskColor,
                                   ),
-                                  if (isPaymentPayload && details.isNotEmpty) ...[
-                                    const SizedBox(height: 10),
-                                    _buildDetailCard(details),
+                                  if (result.threatIntel != null) ...[
+                                    const SizedBox(height: 18),
+                                    _buildThreatIntelCard(result),
                                   ],
                                   const SizedBox(height: 18),
                                   if (hasDecisionNotes)
@@ -441,7 +450,6 @@ class ResultScreen extends StatelessWidget {
                                         border: Border.all(
                                           color: const Color(0xFF82E6FF)
                                               .withValues(alpha: 0.35),
-                                          style: BorderStyle.solid,
                                           width: 1,
                                         ),
                                         borderRadius: BorderRadius.circular(14),
@@ -517,7 +525,8 @@ class ResultScreen extends StatelessWidget {
                                             (rec) => Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                      vertical: 7),
+                                                vertical: 7,
+                                              ),
                                               child: Row(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
@@ -539,7 +548,8 @@ class ResultScreen extends StatelessWidget {
                                                           .spaceGrotesk(
                                                         fontSize: 13,
                                                         color: const Color(
-                                                            0xFFE8EEFF),
+                                                          0xFFE8EEFF,
+                                                        ),
                                                         height: 1.56,
                                                         fontWeight:
                                                             FontWeight.w400,
@@ -561,7 +571,8 @@ class ResultScreen extends StatelessWidget {
                                           .pop(ResultScreenAction.scanAgain),
                                       style: ElevatedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(
-                                            vertical: 15),
+                                          vertical: 15,
+                                        ),
                                         backgroundColor:
                                             const Color(0xFF3DA9FF),
                                         shadowColor: const Color(0x553DA9FF),
@@ -590,10 +601,12 @@ class ResultScreen extends StatelessWidget {
                                           .pop(ResultScreenAction.backHome),
                                       style: OutlinedButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(
-                                            vertical: 15),
+                                          vertical: 15,
+                                        ),
                                         side: const BorderSide(
-                                            color: Color(0xFF82E6FF),
-                                            width: 1.5),
+                                          color: Color(0xFF82E6FF),
+                                          width: 1.5,
+                                        ),
                                         foregroundColor:
                                             const Color(0xFFBDEBFF),
                                         shape: RoundedRectangleBorder(
@@ -622,6 +635,101 @@ class ResultScreen extends StatelessWidget {
               );
             },
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThreatIntelCard(PredictionResult result) {
+    final intel = result.threatIntel!;
+
+    final verdictText = intel.verdict.toUpperCase();
+    final verdictColor = intel.malicious
+        ? const Color(0xFFFF7C92)
+        : (intel.checked
+            ? const Color(0xFF63F0A3)
+            : const Color(0xFFFFC564));
+
+    final fusionText = result.fusionApplied
+        ? 'Fusion applied'
+        : 'Model-only decision';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A0F32),
+        border: Border.all(
+          color: const Color(0xFFA8C9FF).withValues(alpha: 0.25),
+        ),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.gpp_maybe_outlined,
+                size: 16,
+                color: Color(0xFF82E6FF),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Threat Intelligence',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF82E6FF),
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _pill('Provider: ${intel.provider.isEmpty ? 'N/A' : intel.provider.toUpperCase()}'),
+              _pill('Verdict: $verdictText', color: verdictColor),
+              _pill(fusionText, color: result.fusionApplied ? const Color(0xFFFFC564) : const Color(0xFF63F0A3)),
+              _pill(intel.cacheHit ? 'Cache hit' : 'Live lookup'),
+              _pill('Intel latency: ${intel.latencyMs.toStringAsFixed(2)} ms'),
+            ],
+          ),
+          if (intel.reason.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              intel.reason.trim(),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 12.5,
+                color: const Color(0xFFE8EEFF),
+                height: 1.45,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _pill(String text, {Color? color}) {
+    final chipColor = color ?? const Color(0xFFBDEBFF);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: chipColor.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: chipColor.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.spaceGrotesk(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: chipColor,
+          letterSpacing: 0.05,
         ),
       ),
     );
@@ -700,100 +808,9 @@ class ResultScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailCard(Map<String, dynamic> details) {
-    final entries = <MapEntry<String, String>>[];
-
-    void addEntry(String key, String label) {
-      final value = details[key];
-      if (value is String && value.trim().isNotEmpty) {
-        entries.add(MapEntry(label, value.trim()));
-      }
-    }
-
-    addEntry('merchant_name', 'Merchant');
-    addEntry('merchant_city', 'City');
-    addEntry('country_code', 'Country');
-    addEntry('payload_format', 'Format');
-
-    if (entries.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF08153A),
-        border: Border.all(
-          color: const Color(0xFF8FE7FF).withValues(alpha: 0.28),
-        ),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.receipt_long_rounded,
-                size: 15,
-                color: Color(0xFF8FE7FF),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Detected Payment Details',
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 11.5,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF8FE7FF),
-                  letterSpacing: 0.24,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...entries.map(
-            (entry) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 72,
-                    child: Text(
-                      entry.key,
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF9CC7FF),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      entry.value,
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 12.5,
-                        color: const Color(0xFFE8EEFF),
-                        height: 1.45,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _summaryText(PredictionResult result) {
     if (result.isPhishing) {
       return 'This result is high risk. Treat the URL as unsafe and avoid entering credentials or payment details.';
-    }
-
-    if (result.isPaymentPayload) {
-      return 'This is a payment QR payload, not a normal website link. Verify the merchant, amount, and receiver inside the official payment app before confirming.';
     }
 
     if (result.isUncertain) {
@@ -805,14 +822,12 @@ class ResultScreen extends StatelessWidget {
 
   Color _summaryColor(PredictionResult result) {
     if (result.isPhishing) return const Color(0xFFFF7C92);
-    if (result.isPaymentPayload) return const Color(0xFF73D9FF);
     if (result.isUncertain) return const Color(0xFFFFC564);
     return const Color(0xFF63F0A3);
   }
 
   IconData _summaryIcon(PredictionResult result) {
     if (result.isPhishing) return Icons.warning_rounded;
-    if (result.isPaymentPayload) return Icons.payments_rounded;
     if (result.isUncertain) return Icons.help_outline_rounded;
     return Icons.verified_rounded;
   }

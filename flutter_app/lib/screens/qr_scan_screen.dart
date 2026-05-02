@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
+import '../services/qr_scanner_service.dart';
 import '../widgets/analyzing_overlay.dart';
 import '../widgets/plexus_background.dart';
 import 'home_screen.dart';
@@ -57,15 +58,34 @@ class _QrScanScreenState extends State<QrScanScreen> {
     await Future.delayed(const Duration(milliseconds: 500));
 
     if (mounted) {
-      await _submitUrl(payload);
+      await _submitScannedQr(payload);
     }
   }
 
-  Future<void> _submitUrl(String url) async {
+  Future<void> _submitScannedQr(String payload) async {
+    await _submitPayload(payload, validateManualInput: false);
+  }
+
+  Future<void> _submitManualUrl(String url) async {
+    await _submitPayload(url, validateManualInput: true);
+  }
+
+  Future<void> _submitPayload(
+    String url, {
+    required bool validateManualInput,
+  }) async {
     final candidate = url.trim();
     if (candidate.isEmpty) {
       setState(() {
         _error = 'Please provide QR content or URL';
+        _isProcessing = false;
+      });
+      return;
+    }
+
+    if (validateManualInput && !QrScannerService.isProbableUrl(candidate)) {
+      setState(() {
+        _error = 'Manual entry needs a full URL such as https://example.com';
         _isProcessing = false;
       });
       return;
@@ -362,7 +382,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                                         child: ElevatedButton(
                                           onPressed: _isProcessing
                                               ? null
-                                              : () => _submitUrl(
+                                              : () => _submitManualUrl(
                                                   _urlController.text),
                                           style: ElevatedButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(

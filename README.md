@@ -264,3 +264,85 @@ The output handler now performs exactly the responsibilities in your architectur
 Primary file:
 
 - `src/output_handler.py`
+
+## 24/7 Backend Deployment (Google Cloud Run)
+
+If you want your backend online all the time for mobile users, deploy Flask to Cloud Run and set a permanent HTTPS API URL in Flutter.
+
+### Why Cloud Run
+
+- Managed deployment (no manual server maintenance)
+- HTTPS URL by default
+- Auto-restart and autoscaling
+- Can be configured for near always-on by setting minimum instances
+
+### Quick Steps
+
+1. Install and login to Google Cloud CLI.
+2. Create/select a project and enable billing.
+3. Create a Cloud Storage bucket and upload your model file (`soft_voting_ensemble.joblib`) if you do not want it baked into image.
+4. Deploy the backend container to Cloud Run.
+5. Set Flutter API URL to your Cloud Run service URL.
+
+### Example deploy command
+
+```bash
+gcloud run deploy phish-guard-backend \
+	--source . \
+	--region asia-southeast1 \
+	--allow-unauthenticated \
+	--port 8080 \
+	--memory 2Gi \
+	--cpu 1 \
+	--timeout 120 \
+	--min-instances 1 \
+	--set-env-vars PORT=8080,FLASK_ENV=production,MODEL_DOWNLOAD_URL=https://storage.googleapis.com/YOUR_BUCKET/soft_voting_ensemble.joblib
+```
+
+Notes:
+
+- `--min-instances 1` reduces cold starts and keeps service warm for mobile clients.
+- Replace region with your nearest location.
+- If your model is private, use signed URL or service-account-based access.
+
+### Flutter connection
+
+Use your Cloud Run URL in Flutter:
+
+```bash
+flutter run --dart-define=API_BASE_URL=https://YOUR_CLOUD_RUN_URL
+```
+
+For release builds:
+
+```bash
+flutter build apk --release --dart-define=API_BASE_URL=https://YOUR_CLOUD_RUN_URL
+```
+
+### Health check
+
+```bash
+curl -s https://YOUR_CLOUD_RUN_URL/api/health
+```
+
+Expected response includes: `{"ok": true, "service": "phish-guard" ...}`
+
+## Hybrid Ablation Benchmark (Model-Only vs Hybrid)
+
+To generate report-ready evidence that compares model-only detection against
+hybrid detection (model + threat intelligence fusion), run:
+
+```bash
+python scripts/benchmark_hybrid_ablation.py
+```
+
+Generated artifacts:
+
+- `artifacts/results/hybrid_ablation_predictions.csv`
+- `artifacts/results/hybrid_ablation_metrics.json`
+
+The JSON summary includes:
+
+- baseline metrics (`model_only`)
+- upgraded metrics (`hybrid`)
+- improvement deltas (`accuracy_delta`, `recall_delta`, `fpr_delta`, `fnr_delta`)

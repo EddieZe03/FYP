@@ -1,0 +1,36 @@
+# VCS
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Local env and editor
+.venv/
+.env
+.vscode/
+
+# Flutter and build artifacts
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+
+# Data and docs not required at runtime
+data/
+archive/
+*.csv
+*.md
+
+# Large local artifacts not required when MODEL_DOWNLOAD_URL is used
+artifacts/base_models_all_datasets/
+artifacts/ensemble_all_datasets/
+artifacts/ensemble_all_datasets_phishing_db/
+artifacts/ensemble_all_datasets_rebuilt/
+artifacts/ensemble_all_datasets_retry/
+artifacts/final_submission/

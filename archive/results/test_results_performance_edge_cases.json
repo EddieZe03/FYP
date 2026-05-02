@@ -1,0 +1,60 @@
+{
+  "timestamp": "2026-03-25T03:22:43.992868",
+  "performance": {
+    "Short URLs": {
+      "status": "FAILED (3/3 errors)",
+      "avg_per_url_ms": null,
+      "throughput_urls_per_sec": null
+    },
+    "Medium URLs": {
+      "status": "FAILED (3/3 errors)",
+      "avg_per_url_ms": null,
+      "throughput_urls_per_sec": null
+    },
+    "Long URLs": {
+      "status": "FAILED (3/3 errors)",
+      "avg_per_url_ms": null,
+      "throughput_urls_per_sec": null
+    }
+  },
+  "memory": {
+    "in_memory_mb": 4.57763671875e-05,
+    "file_size_mb": 198.9986114501953
+  },
+  "edge_cases": {
+    "Legitimate - Edge Cases": {
+      "total": 5,
+      "successful": 0,
+      "errors": 5
+    },
+    "Phishing - Subtle Variations": {
+      "total": 5,
+      "successful": 0,
+      "errors": 5
+    },
+    "International Domains": {
+      "total": 5,
+      "successful": 0,
+      "errors": 5
+    },
+    "Malformed/Suspicious URLs": {
+      "total": 5,
+      "successful": 0,
+      "errors": 5
+    },
+    "Encoded/Binary URLs": {
+      "total": 5,
+      "successful": 0,
+      "errors": 5
+    },
+    "Boundary Cases": {
+      "total": 5,
+      "successful": 0,
+      "errors": 5
+    }
+  },
+  "threshold_analysis": {
+    "status": "FAILED",
+    "error": "The feature names should match those that were passed during fit.\nFeature names seen at fit time, yet now missing:\n- redirection_count\n"
+  }
+}
