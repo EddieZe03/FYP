@@ -17,6 +17,9 @@ dependencies:
   
   # QR Code scanning
   mobile_scanner: ^3.4.0
+
+  # Image picking for QR scans from device gallery
+  image_picker: ^1.1.2
   
   # State management
   provider: ^6.0.0

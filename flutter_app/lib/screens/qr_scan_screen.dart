@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../services/api_service.dart';
 import '../services/qr_scanner_service.dart';
@@ -16,10 +17,12 @@ class QrScanScreen extends StatefulWidget {
 }
 
 class _QrScanScreenState extends State<QrScanScreen> {
+  final ImagePicker _imagePicker = ImagePicker();
   final TextEditingController _urlController = TextEditingController();
   final FocusNode _urlFocusNode = FocusNode();
   MobileScannerController? _cameraController;
   bool _isProcessing = false;
+  bool _isScanningDeviceImage = false;
   String? _error;
   String? _scanStatus = 'Ready to scan';
 
@@ -61,6 +64,60 @@ class _QrScanScreenState extends State<QrScanScreen> {
 
     if (mounted) {
       await _submitScannedQr(payload);
+    }
+  }
+
+  Future<void> _stopCamera() async {
+    try {
+      await _cameraController?.stop();
+    } catch (_) {}
+  }
+
+  Future<void> _startCamera() async {
+    try {
+      await _cameraController?.start();
+    } catch (_) {}
+  }
+
+  Future<void> _chooseQrFromDevice() async {
+    if (_isProcessing) return;
+
+    await _stopCamera();
+
+    final image = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (image == null) {
+      await _startCamera();
+      return;
+    }
+
+    setState(() {
+      _isScanningDeviceImage = true;
+      _error = null;
+      _scanStatus = 'Analyzing QR image from device';
+    });
+
+    try {
+      final found = await _cameraController?.analyzeImage(image.path) ?? false;
+
+      if (!mounted) return;
+
+      if (!found) {
+        setState(() {
+          _error = 'No QR code was found in that image.';
+          _isScanningDeviceImage = false;
+          _scanStatus = 'Ready to scan';
+        });
+        await _startCamera();
+        return;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Could not read QR code from that image.';
+        _isScanningDeviceImage = false;
+        _scanStatus = 'Ready to scan';
+      });
+      await _startCamera();
     }
   }
 
@@ -121,10 +178,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
           _urlController.clear();
           _error = null;
         }
+        _isScanningDeviceImage = false;
       });
 
       if (action == ResultScreenAction.scanAgain) {
         FocusScope.of(context).requestFocus(_urlFocusNode);
+        await _startCamera();
       }
 
       if (action == ResultScreenAction.backHome) {
@@ -137,7 +196,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
       setState(() {
         _error = response.error ?? 'Prediction failed';
         _isProcessing = false;
+        _isScanningDeviceImage = false;
       });
+
+      if (_cameraController != null) {
+        await _startCamera();
+      }
     }
   }
 
@@ -288,6 +352,41 @@ class _QrScanScreenState extends State<QrScanScreen> {
                                           ),
                                         ),
                                       ),
+                                      const SizedBox(height: 12),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        child: OutlinedButton.icon(
+                                          onPressed: (_isProcessing ||
+                                                  _isScanningDeviceImage)
+                                              ? null
+                                              : _chooseQrFromDevice,
+                                          style: OutlinedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 16),
+                                            foregroundColor:
+                                                const Color(0xFFB9E8FF),
+                                            side: const BorderSide(
+                                              color: Color(0x5A82E6FF),
+                                              width: 1.2,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          icon: const Icon(
+                                            Icons.photo_library_outlined,
+                                            size: 20,
+                                          ),
+                                          label: Text(
+                                            'Choose from device',
+                                            style: GoogleFonts.spaceGrotesk(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 15,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                       const SizedBox(height: 16),
                                       if (_scanStatus != null)
                                         Text(
@@ -310,7 +409,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
                                       TextField(
                                         controller: _urlController,
                                         focusNode: _urlFocusNode,
-                                        enabled: !_isProcessing,
+                                        enabled: !_isProcessing &&
+                                            !_isScanningDeviceImage,
                                         decoration: InputDecoration(
                                           hintText: 'https://example.com',
                                           hintStyle: GoogleFonts.spaceGrotesk(
