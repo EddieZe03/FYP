@@ -388,18 +388,30 @@ class ResultScreen extends StatelessWidget {
                                           ),
                                           child: Align(
                                             alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              response.normalizedUrl ??
-                                                  response.inputUrl ?? '',
-                                              style: GoogleFonts.spaceGrotesk(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFFF4F7FF),
-                                                height: 1.54,
-                                                letterSpacing: 0.05,
-                                              ),
-                                              maxLines: 4,
-                                              overflow: TextOverflow.ellipsis,
+                                            child: Builder(
+                                              builder: (context) {
+                                                final analyzed =
+                                                    response.normalizedUrl ??
+                                                    response.inputUrl ??
+                                                    '';
+
+                                                return Text(
+                                                  _formatAnalyzedContent(
+                                                    analyzed,
+                                                  ),
+                                                  style: GoogleFonts
+                                                      .spaceGrotesk(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(
+                                                      0xFFF4F7FF,
+                                                    ),
+                                                    height: 1.54,
+                                                    letterSpacing: 0.05,
+                                                  ),
+                                                  softWrap: true,
+                                                );
+                                              },
                                             ),
                                           ),
                                         ),
@@ -830,6 +842,34 @@ class ResultScreen extends StatelessWidget {
     if (result.isPhishing) return Icons.warning_rounded;
     if (result.isUncertain) return Icons.help_outline_rounded;
     return Icons.verified_rounded;
+  }
+
+  String _formatAnalyzedContent(String value) {
+    if (value.isEmpty) return value;
+
+    const softBreakChars = {'/', '.', '?', '&', '=', '-', '_', ':', '%', '#', '+', '@'};
+    const chunkLimit = 16;
+    final buffer = StringBuffer();
+    var chunkLength = 0;
+
+    for (final rune in value.runes) {
+      final character = String.fromCharCode(rune);
+      buffer.write(character);
+
+      if (softBreakChars.contains(character)) {
+        buffer.write('\u200B');
+        chunkLength = 0;
+        continue;
+      }
+
+      chunkLength += 1;
+      if (chunkLength >= chunkLimit) {
+        buffer.write('\u200B');
+        chunkLength = 0;
+      }
+    }
+
+    return buffer.toString();
   }
 
   Future<void> _copyUrl(BuildContext context, String url) async {
