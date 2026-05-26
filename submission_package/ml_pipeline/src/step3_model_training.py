@@ -160,8 +160,6 @@ def main() -> None:
 
     print("Baseline model metrics:")
     print(primary_metrics.to_string(index=False))
-    print("\nBaseline model error analysis:")
-    print(error_analysis.to_string(index=False))
     print(f"Saved metrics to {metrics_path}")
     print(f"Saved error analysis to {errors_path}")
 

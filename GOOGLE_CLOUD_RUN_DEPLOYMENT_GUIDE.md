@@ -39,10 +39,12 @@ Your app already supports runtime model download via MODEL_DOWNLOAD_URL.
 
 ```bash
 gsutil mb -l "$REGION" "gs://$BUCKET_NAME" || true
-gsutil cp artifacts/ensemble_all_datasets_retry/soft_voting_ensemble.joblib "gs://$BUCKET_NAME/soft_voting_ensemble.joblib"
+gsutil cp artifacts/ensemble_ultra_all_datasets/ultra_ensemble_calibrated.joblib "gs://$BUCKET_NAME/models/ultra_ensemble_v2.joblib"
 ```
 
-If bucket objects are private, create a signed URL and use that URL for MODEL_DOWNLOAD_URL.
+Use a versioned object name like `models/ultra_ensemble_v2.joblib` so you can swap models without confusion.
+
+If bucket objects are private, create a signed URL and use that URL for `MODEL_DOWNLOAD_URL`. For long-running Cloud Run services, a public object or a new versioned URL is safer than reusing a short-lived signed URL.
 
 ## 6) Deploy to Cloud Run
 
@@ -59,7 +61,7 @@ gcloud run deploy "$SERVICE_NAME" \
   --timeout 120 \
   --min-instances 1 \
   --max-instances 5 \
-  --set-env-vars PORT=8080,FLASK_ENV=production,MODEL_DOWNLOAD_URL=https://storage.googleapis.com/$BUCKET_NAME/soft_voting_ensemble.joblib
+  --set-env-vars PORT=8080,FLASK_ENV=production,MODEL_DOWNLOAD_URL=https://storage.googleapis.com/$BUCKET_NAME/models/ultra_ensemble_v2.joblib,PHISHING_THRESHOLD=0.565
 ```
 
 After deploy, Cloud Run prints your service URL:
@@ -67,6 +69,8 @@ After deploy, Cloud Run prints your service URL:
 ```text
 https://phish-guard-backend-xxxxx-xx.a.run.app
 ```
+
+If you want a truly fixed public URL, map a custom domain in Cloud Run or use a Load Balancer in front of the service. The default Cloud Run service URL is stable for the service, but custom domain mapping makes it easier to keep the same address long-term.
 
 ## 7) Verify backend health
 
@@ -94,6 +98,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://YOUR_SERVICE_URL
 ## 9) Cost and reliability notes
 
 - Keeping min instances at 1 improves user experience but costs more.
+- Keeping `--min-instances 1` helps avoid cold starts that can look like temporary connection failures in the Flutter app.
 - If budget is tight, set min instances to 0 and accept occasional cold starts.
 - Monitor logs in Cloud Run to detect inference failures.
 

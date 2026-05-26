@@ -388,18 +388,41 @@ class ResultScreen extends StatelessWidget {
                                           ),
                                           child: Align(
                                             alignment: Alignment.centerLeft,
-                                            child: Text(
-                                              response.normalizedUrl ??
-                                                  response.inputUrl ?? '',
-                                              style: GoogleFonts.spaceGrotesk(
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w600,
-                                                color: const Color(0xFFF4F7FF),
-                                                height: 1.54,
-                                                letterSpacing: 0.05,
-                                              ),
-                                              softWrap: true,
-                                            ),
+                                            child: Builder(builder: (context) {
+                                              final analyzed = response.normalizedUrl ?? response.inputUrl ?? '';
+                                              final hasLongUnbroken = RegExp(r"\S{80,}").hasMatch(analyzed);
+
+                                              if (hasLongUnbroken) {
+                                                return SingleChildScrollView(
+                                                  scrollDirection: Axis.horizontal,
+                                                  child: SelectableText(
+                                                    analyzed,
+                                                    style: GoogleFonts.spaceGrotesk(
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFFF4F7FF),
+                                                      height: 1.54,
+                                                      letterSpacing: 0.05,
+                                                    ),
+                                                    maxLines: 1,
+                                                    showCursor: false,
+                                                  ),
+                                                );
+                                              }
+
+                                              return SelectableText(
+                                                analyzed,
+                                                style: GoogleFonts.spaceGrotesk(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(0xFFF4F7FF),
+                                                  height: 1.54,
+                                                  letterSpacing: 0.05,
+                                                ),
+                                                textAlign: TextAlign.left,
+                                                maxLines: null,
+                                              );
+                                            }),
                                           ),
                                         ),
                                       ],
